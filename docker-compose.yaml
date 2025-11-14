@@ -1,0 +1,31 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:2.0.21
+    restart: always
+    volumes:
+      - /mosquitto
+    ports:
+      - 1883:1883
+      - 9001:9001
+    command: "mosquitto -c /mosquitto-no-auth.conf"
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:2.6.3
+    restart: always
+    volumes:
+      - ./zigbee2mqtt-data:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      - 8080:8080
+    environment:
+      - TZ=Europe/Stockholm
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+  night-light:
+    build:
+      context: .
+      dockerfile: ./NightLight/Dockerfile
+    restart: always
+    environment:
+      - MQTT_SERVER=mqtt
+      - TZ=Europe/Stockholm
+

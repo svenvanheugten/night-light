@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="PartsOfDay.fs" />
+        <Compile Include="Moods.fs" />
+        <Compile Include="Lights.fs" />
+        <Compile Include="ZigbeeEvents.fs" />
+        <Compile Include="ZigbeeCommands.fs" />
+        <Compile Include="Configuration.fs" />
+        <Compile Include="Core.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FSharp.Data" Version="6.6.0" />
+        <PackageReference Include="FsToolkit.ErrorHandling" Version="4.18.0" />
+    </ItemGroup>
+
+</Project>
