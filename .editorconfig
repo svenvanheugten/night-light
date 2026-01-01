@@ -1,0 +1,10 @@
+root = true
+
+[*]
+end_of_line = lf
+
+[*.{fs,fsi,fsx}]
+indent_size = 4
+indent_style = space
+trim_trailing_whitespace=true
+
