@@ -28,8 +28,7 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
         return!
             commands
             |> Seq.map generateMqttMessage
-            |> Seq.map mqttClient.PublishAsync
-            |> Seq.map Async.AwaitTask
+            |> Seq.map (fun message -> async { return! mqttClient.PublishAsync message |> Async.AwaitTask })
             |> Async.Sequential
             |> Async.Ignore
     }
