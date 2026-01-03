@@ -1,4 +1,4 @@
-module NightLight.PartsOfDay
+module internal NightLight.PartsOfDay
 
 open System
 
