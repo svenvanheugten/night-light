@@ -94,7 +94,8 @@ let mainAsync _ =
             let currentPartOfDay = getPartOfDay DateTime.Now
 
             if previousPartOfDay <> Some currentPartOfDay then
-                do! onPartOfDayChanged currentPartOfDay |> publishZigbeeCommands mqttClient logger
+                do! PartOfDayChanged |> handleEvent mqttClient logger currentPartOfDay
+
                 previousPartOfDay <- Some currentPartOfDay
 
             do! Async.Sleep 10_000

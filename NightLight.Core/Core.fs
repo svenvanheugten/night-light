@@ -17,7 +17,9 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-type Event = ReceivedZigbeeEvent of payload: string
+type Event =
+    | ReceivedZigbeeEvent of payload: string
+    | PartOfDayChanged
 
 let onEventReceived (partOfDay: PartOfDay) (event: Event) =
     result {
@@ -33,7 +35,5 @@ let onEventReceived (partOfDay: PartOfDay) (event: Event) =
                     match maybeLight with
                     | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                     | None -> Seq.empty
+        | PartOfDayChanged -> return lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)
     }
-
-let onPartOfDayChanged (partOfDay: PartOfDay) =
-    lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)
