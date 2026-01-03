@@ -2,7 +2,7 @@ module internal NightLight.Core.ZigbeeCommands
 
 open System.Text.Json.Nodes
 open NightLight.Core.Models
-open NightLight.Core.Lights
+open NightLight.Core.Moods
 
 let generateZigbeeCommand friendlyName targetColor targetBrightness =
     let commandObj = JsonObject()
