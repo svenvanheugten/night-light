@@ -1,7 +1,7 @@
-module internal NightLight.Configuration
+module internal NightLight.Core.Configuration
 
-open NightLight.Moods
-open NightLight.Lights
+open NightLight.Core.Moods
+open NightLight.Core.Lights
 
 let getDesiredColorAndBrightness bulb mood =
     let white = ColorByCoordinates(0.3227, 0.329)

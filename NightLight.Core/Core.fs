@@ -1,12 +1,12 @@
-module NightLight.Core
+module NightLight.Core.Core
 
-open NightLight.Models
-open NightLight.PartsOfDay
-open NightLight.ZigbeeEvents
-open NightLight.ZigbeeCommands
-open NightLight.Moods
-open NightLight.Lights
-open NightLight.Configuration
+open NightLight.Core.Models
+open NightLight.Core.PartsOfDay
+open NightLight.Core.ZigbeeEvents
+open NightLight.Core.ZigbeeCommands
+open NightLight.Core.Moods
+open NightLight.Core.Lights
+open NightLight.Core.Configuration
 open FsToolkit.ErrorHandling
 
 let internal tryFindLight friendlyName =

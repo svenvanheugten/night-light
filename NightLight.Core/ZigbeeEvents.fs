@@ -1,6 +1,6 @@
-module internal NightLight.ZigbeeEvents
+module internal NightLight.Core.ZigbeeEvents
 
-open NightLight.Models
+open NightLight.Core.Models
 open FsToolkit.ErrorHandling
 open FSharp.Data
 

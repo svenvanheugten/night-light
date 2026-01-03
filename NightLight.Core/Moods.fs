@@ -1,6 +1,6 @@
-module internal NightLight.Moods
+module internal NightLight.Core.Moods
 
-open NightLight.PartsOfDay
+open NightLight.Core.PartsOfDay
 
 type Mood =
     | White

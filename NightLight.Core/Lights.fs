@@ -1,6 +1,6 @@
-module internal NightLight.Lights
+module internal NightLight.Core.Lights
 
-open NightLight.Moods
+open NightLight.Core.Moods
 
 type Bulb =
     | IkeaBulb

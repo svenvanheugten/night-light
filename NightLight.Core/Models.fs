@@ -1,4 +1,4 @@
-module NightLight.Models
+module NightLight.Core.Models
 
 open System
 
