@@ -35,22 +35,24 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
             |> Async.Ignore
     }
 
+let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (partOfDay: PartOfDay) (event: Event) =
+    let commandsResult = event |> onEventReceived partOfDay
+
+    match commandsResult with
+    | Ok commands -> publishZigbeeCommands mqttClient logger commands
+    | Error UnknownType -> async.Return()
+    | Error e ->
+        logger.LogError("Error {Error} while {Event}", e, event)
+        async.Return()
+
 let private onMqttMessageReceived (mqttClient: IMqttClient) (logger: ILogger) (message: MqttApplicationMessage) =
     let payload = message.Payload
     let decodedPayload = Encoding.UTF8.GetString(&payload)
 
     logger.LogInformation("Received message with payload {Payload}", decodedPayload)
 
-    let commandsResult =
-        ReceivedZigbeeEvent decodedPayload
-        |> onEventReceived (getPartOfDay DateTime.Now)
-
-    match commandsResult with
-    | Ok commands -> publishZigbeeCommands mqttClient logger commands
-    | Error UnknownType -> async.Return()
-    | Error e ->
-        logger.LogError("Error {Error} while processing {Payload}", e, payload)
-        async.Return()
+    ReceivedZigbeeEvent decodedPayload
+    |> handleEvent mqttClient logger (getPartOfDay DateTime.Now)
 
 [<EntryPoint>]
 let mainAsync _ =
