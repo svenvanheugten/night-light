@@ -36,6 +36,10 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
     }
 
 let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: State) (event: Event) =
+    match event with
+    | ReceivedZigbeeEvent payload -> logger.LogInformation("Received message with payload {Payload}", payload)
+    | _ -> ()
+
     let result = event |> onEventReceived state
 
     match result with
@@ -49,18 +53,11 @@ let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: Stat
         logger.LogError("Error {Error} while {Event}", e, event)
         async.Return state
 
-let private onMqttMessageReceived
-    (mqttClient: IMqttClient)
-    (logger: ILogger)
-    (state: State)
-    (message: MqttApplicationMessage)
-    =
+let private mqttMessageToReceivedZigbeeEvent (message: MqttApplicationMessage) =
     let payload = message.Payload
     let decodedPayload = Encoding.UTF8.GetString(&payload)
 
-    logger.LogInformation("Received message with payload {Payload}", decodedPayload)
-
-    ReceivedZigbeeEvent decodedPayload |> handleEvent mqttClient logger state
+    ReceivedZigbeeEvent decodedPayload
 
 [<EntryPoint>]
 let mainAsync _ =
@@ -89,10 +86,12 @@ let mainAsync _ =
 
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
             async {
+                let event = mqttMessageToReceivedZigbeeEvent e.ApplicationMessage
+
                 do! stateLock.WaitAsync() |> Async.AwaitTask
 
                 try
-                    let! newState = onMqttMessageReceived mqttClient logger state e.ApplicationMessage
+                    let! newState = event |> handleEvent mqttClient logger state
                     state <- newState
                 finally
                     stateLock.Release() |> ignore
