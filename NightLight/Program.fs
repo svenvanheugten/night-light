@@ -42,7 +42,8 @@ let private onMqttMessageReceived (mqttClient: IMqttClient) (logger: ILogger) (m
     logger.LogInformation("Received message with payload {Payload}", decodedPayload)
 
     let commandsResult =
-        decodedPayload |> onZigbeeEventReceived (getPartOfDay DateTime.Now)
+        ReceivedZigbeeEvent decodedPayload
+        |> onEventReceived (getPartOfDay DateTime.Now)
 
     match commandsResult with
     | Ok commands -> publishZigbeeCommands mqttClient logger commands

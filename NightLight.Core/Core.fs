@@ -17,18 +17,22 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-let onZigbeeEventReceived (partOfDay: PartOfDay) (decodedPayload: string) =
+type Event = ReceivedZigbeeEvent of payload: string
+
+let onEventReceived (partOfDay: PartOfDay) (event: Event) =
     result {
-        let! zigbeeEvent = parseZigbeeEvent decodedPayload
+        match event with
+        | ReceivedZigbeeEvent payload ->
+            let! zigbeeEvent = parseZigbeeEvent payload
 
-        return
-            match zigbeeEvent with
-            | DeviceAnnounce friendlyName ->
-                let maybeLight = tryFindLight friendlyName
+            return
+                match zigbeeEvent with
+                | DeviceAnnounce friendlyName ->
+                    let maybeLight = tryFindLight friendlyName
 
-                match maybeLight with
-                | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
-                | None -> Seq.empty
+                    match maybeLight with
+                    | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
+                    | None -> Seq.empty
     }
 
 let onPartOfDayChanged (partOfDay: PartOfDay) =
