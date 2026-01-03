@@ -44,7 +44,7 @@ let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: Stat
             do! publishZigbeeCommands mqttClient logger commands
             return newState
         }
-    | Error UnknownType -> async.Return state
+    | Error(ParseZigbeeEventError UnknownType) -> async.Return state
     | Error e ->
         logger.LogError("Error {Error} while {Event}", e, event)
         async.Return state

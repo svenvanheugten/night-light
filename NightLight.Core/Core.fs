@@ -22,15 +22,17 @@ type Event =
     | ReceivedZigbeeEvent of payload: string
     | TimeChanged of DateTime
 
+type ParseEventError = ParseZigbeeEventError of ParseZigbeeEventError
+
 type State = { Time: DateTime }
 
-let onEventReceived (state: State) (event: Event) =
+let onEventReceived (state: State) (event: Event) : Result<State * ZigbeeCommand seq, ParseEventError> =
     result {
         let partOfDay = getPartOfDay state.Time
 
         match event with
         | ReceivedZigbeeEvent payload ->
-            let! zigbeeEvent = parseZigbeeEvent payload
+            let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
             return
                 state,
