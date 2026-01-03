@@ -5,7 +5,6 @@ open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 open MQTTnet
 open MQTTnet.Protocol
-open NightLight.PartsOfDay
 open NightLight.ZigbeeEvents
 open NightLight.ZigbeeCommands
 open NightLight.Core
@@ -86,7 +85,7 @@ let mainAsync _ =
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
         let stateLock = new SemaphoreSlim(1, 1)
-        let mutable state = { PartOfDay = getPartOfDay DateTime.Now }
+        let mutable state = { Time = DateTime.Now }
 
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
             async {
@@ -108,21 +107,14 @@ let mainAsync _ =
             |> Async.AwaitTask
             |> Async.Ignore
 
-        let mutable previousPartOfDay: PartOfDay option = None
-
         while true do
-            let currentPartOfDay = getPartOfDay DateTime.Now
+            do! stateLock.WaitAsync() |> Async.AwaitTask
 
-            if previousPartOfDay <> Some currentPartOfDay then
-                do! stateLock.WaitAsync() |> Async.AwaitTask
-
-                try
-                    let! newState = PartOfDayChanged currentPartOfDay |> handleEvent mqttClient logger state
-                    state <- newState
-                finally
-                    stateLock.Release() |> ignore
-
-                previousPartOfDay <- Some currentPartOfDay
+            try
+                let! newState = TimeChanged DateTime.Now |> handleEvent mqttClient logger state
+                state <- newState
+            finally
+                stateLock.Release() |> ignore
 
             do! Async.Sleep 10_000
 

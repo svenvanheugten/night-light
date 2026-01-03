@@ -1,5 +1,6 @@
 module NightLight.Core
 
+open System
 open NightLight.PartsOfDay
 open NightLight.ZigbeeEvents
 open NightLight.ZigbeeCommands
@@ -19,13 +20,13 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
 type Event =
     | ReceivedZigbeeEvent of payload: string
-    | PartOfDayChanged of newPartOfDay: PartOfDay
+    | TimeChanged of DateTime
 
-type State = { PartOfDay: PartOfDay }
+type State = { Time: DateTime }
 
 let onEventReceived (state: State) (event: Event) =
     result {
-        let partOfDay = state.PartOfDay
+        let partOfDay = getPartOfDay state.Time
 
         match event with
         | ReceivedZigbeeEvent payload ->
@@ -40,6 +41,14 @@ let onEventReceived (state: State) (event: Event) =
                     match maybeLight with
                     | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                     | None -> Seq.empty
-        | PartOfDayChanged newPartOfDay ->
-            return { PartOfDay = newPartOfDay }, lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)
+        | TimeChanged time ->
+            let newState = { Time = time }
+            let newPartOfDay = getPartOfDay time
+
+            return
+                newState,
+                if partOfDay <> newPartOfDay then
+                    lights |> Seq.map (generateZigbeeCommandToFixLight newPartOfDay)
+                else
+                    Seq.empty
     }
