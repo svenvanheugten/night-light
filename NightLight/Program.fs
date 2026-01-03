@@ -1,5 +1,6 @@
 ﻿open System
 open System.Text
+open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 open MQTTnet
@@ -35,24 +36,32 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
             |> Async.Ignore
     }
 
-let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (partOfDay: PartOfDay) (event: Event) =
-    let commandsResult = event |> onEventReceived partOfDay
+let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: State) (event: Event) =
+    let result = event |> onEventReceived state
 
-    match commandsResult with
-    | Ok commands -> publishZigbeeCommands mqttClient logger commands
-    | Error UnknownType -> async.Return()
+    match result with
+    | Ok(newState, commands) ->
+        async {
+            do! publishZigbeeCommands mqttClient logger commands
+            return newState
+        }
+    | Error UnknownType -> async.Return state
     | Error e ->
         logger.LogError("Error {Error} while {Event}", e, event)
-        async.Return()
+        async.Return state
 
-let private onMqttMessageReceived (mqttClient: IMqttClient) (logger: ILogger) (message: MqttApplicationMessage) =
+let private onMqttMessageReceived
+    (mqttClient: IMqttClient)
+    (logger: ILogger)
+    (state: State)
+    (message: MqttApplicationMessage)
+    =
     let payload = message.Payload
     let decodedPayload = Encoding.UTF8.GetString(&payload)
 
     logger.LogInformation("Received message with payload {Payload}", decodedPayload)
 
-    ReceivedZigbeeEvent decodedPayload
-    |> handleEvent mqttClient logger (getPartOfDay DateTime.Now)
+    ReceivedZigbeeEvent decodedPayload |> handleEvent mqttClient logger state
 
 [<EntryPoint>]
 let mainAsync _ =
@@ -76,8 +85,19 @@ let mainAsync _ =
 
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
+        let stateLock = new SemaphoreSlim(1, 1)
+        let mutable state = { PartOfDay = getPartOfDay DateTime.Now }
+
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
-            onMqttMessageReceived mqttClient logger e.ApplicationMessage
+            async {
+                do! stateLock.WaitAsync() |> Async.AwaitTask
+
+                try
+                    let! newState = onMqttMessageReceived mqttClient logger state e.ApplicationMessage
+                    state <- newState
+                finally
+                    stateLock.Release() |> ignore
+            }
             |> Async.StartAsTask
             :> Task)
 
@@ -94,7 +114,13 @@ let mainAsync _ =
             let currentPartOfDay = getPartOfDay DateTime.Now
 
             if previousPartOfDay <> Some currentPartOfDay then
-                do! PartOfDayChanged |> handleEvent mqttClient logger currentPartOfDay
+                do! stateLock.WaitAsync() |> Async.AwaitTask
+
+                try
+                    let! newState = PartOfDayChanged currentPartOfDay |> handleEvent mqttClient logger state
+                    state <- newState
+                finally
+                    stateLock.Release() |> ignore
 
                 previousPartOfDay <- Some currentPartOfDay
 

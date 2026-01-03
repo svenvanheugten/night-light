@@ -19,15 +19,20 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
 type Event =
     | ReceivedZigbeeEvent of payload: string
-    | PartOfDayChanged
+    | PartOfDayChanged of newPartOfDay: PartOfDay
 
-let onEventReceived (partOfDay: PartOfDay) (event: Event) =
+type State = { PartOfDay: PartOfDay }
+
+let onEventReceived (state: State) (event: Event) =
     result {
+        let partOfDay = state.PartOfDay
+
         match event with
         | ReceivedZigbeeEvent payload ->
             let! zigbeeEvent = parseZigbeeEvent payload
 
             return
+                state,
                 match zigbeeEvent with
                 | DeviceAnnounce friendlyName ->
                     let maybeLight = tryFindLight friendlyName
@@ -35,5 +40,6 @@ let onEventReceived (partOfDay: PartOfDay) (event: Event) =
                     match maybeLight with
                     | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                     | None -> Seq.empty
-        | PartOfDayChanged -> return lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)
+        | PartOfDayChanged newPartOfDay ->
+            return { PartOfDay = newPartOfDay }, lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)
     }
