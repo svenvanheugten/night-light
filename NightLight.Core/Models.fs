@@ -8,7 +8,7 @@ type Event =
     | ReceivedZigbeeEvent of payload: string
     | TimeChanged of DateTime
 
-type Message = Message of Topic: string * Payload: string
+type Message = { Topic: string; Payload: string }
 
 type ParseZigbeeEventError =
     | InvalidJson

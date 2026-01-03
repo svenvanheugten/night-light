@@ -18,7 +18,7 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-let onEventReceived (state: State) (event: Event) : Result<State * ZigbeeCommand seq, ParseEventError> =
+let onEventReceived (state: State) (event: Event) : Result<State * Message seq, ParseEventError> =
     result {
         let partOfDay = getPartOfDay state.Time
 

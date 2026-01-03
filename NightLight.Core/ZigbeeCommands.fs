@@ -22,4 +22,4 @@ let generateZigbeeCommand friendlyName targetColor targetBrightness =
     let topic = $"zigbee2mqtt/{friendlyName}/set"
     let payload = commandObj.ToJsonString()
 
-    Message(topic, payload)
+    { Topic = topic; Payload = payload }
