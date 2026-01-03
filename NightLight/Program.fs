@@ -51,7 +51,9 @@ let private mqttMessageToReceivedZigbeeEvent (message: MqttApplicationMessage) =
     let payload = message.Payload
     let decodedPayload = Encoding.UTF8.GetString(&payload)
 
-    ReceivedZigbeeEvent decodedPayload
+    ReceivedZigbeeEvent
+        { Topic = message.Topic
+          Payload = decodedPayload }
 
 [<EntryPoint>]
 let mainAsync _ =

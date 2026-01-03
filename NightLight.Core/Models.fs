@@ -4,11 +4,11 @@ open System
 
 type State = { Time: DateTime }
 
-type Event =
-    | ReceivedZigbeeEvent of payload: string
-    | TimeChanged of DateTime
-
 type Message = { Topic: string; Payload: string }
+
+type Event =
+    | ReceivedZigbeeEvent of Message
+    | TimeChanged of DateTime
 
 type ParseZigbeeEventError =
     | InvalidJson
