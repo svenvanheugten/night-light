@@ -10,7 +10,7 @@ open NightLight.Core
 
 let private generateMqttMessage zigbeeCommand =
     match zigbeeCommand with
-    | ZigbeeCommand(topic, payload) ->
+    | Message(topic, payload) ->
         MqttApplicationMessageBuilder()
             .WithTopic(topic)
             .WithPayload(payload)
@@ -22,7 +22,7 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
         commands
         |> Seq.iter (fun command ->
             match command with
-            | ZigbeeCommand(topic, payload) ->
+            | Message(topic, payload) ->
                 logger.LogInformation("Publishing message {Payload} to topic {Topic}...", payload, topic))
 
         return!
