@@ -1,6 +1,6 @@
 module NightLight.Core
 
-open System
+open NightLight.Models
 open NightLight.PartsOfDay
 open NightLight.ZigbeeEvents
 open NightLight.ZigbeeCommands
@@ -17,14 +17,6 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
         getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
 
     generateZigbeeCommand light.FriendlyName color brightness
-
-type Event =
-    | ReceivedZigbeeEvent of payload: string
-    | TimeChanged of DateTime
-
-type ParseEventError = ParseZigbeeEventError of ParseZigbeeEventError
-
-type State = { Time: DateTime }
 
 let onEventReceived (state: State) (event: Event) : Result<State * ZigbeeCommand seq, ParseEventError> =
     result {

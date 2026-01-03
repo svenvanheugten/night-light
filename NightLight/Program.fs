@@ -5,8 +5,7 @@ open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 open MQTTnet
 open MQTTnet.Protocol
-open NightLight.ZigbeeEvents
-open NightLight.ZigbeeCommands
+open NightLight.Models
 open NightLight.Core
 
 let private generateMqttMessage zigbeeCommand =

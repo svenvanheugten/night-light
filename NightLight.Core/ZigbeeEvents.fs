@@ -1,20 +1,12 @@
-module NightLight.ZigbeeEvents
+module internal NightLight.ZigbeeEvents
 
+open NightLight.Models
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
 type ZigbeeEvent = DeviceAnnounce of FriendlyName: string
 
-type ParseZigbeeEventError =
-    | InvalidJson
-    | MissingTypeField
-    | MissingDataField
-    | MissingFriendlyNameField
-    | InvalidTypeField
-    | InvalidFriendlyNameField
-    | UnknownType
-
-let internal parseZigbeeEvent str =
+let parseZigbeeEvent str =
     result {
         let! jsonValue = JsonValue.TryParse str |> Result.requireSome InvalidJson
 

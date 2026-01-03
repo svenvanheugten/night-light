@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Models.fs" />
         <Compile Include="PartsOfDay.fs" />
         <Compile Include="Moods.fs" />
         <Compile Include="Lights.fs" />

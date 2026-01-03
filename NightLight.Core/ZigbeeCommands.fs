@@ -1,11 +1,10 @@
-module NightLight.ZigbeeCommands
+module internal NightLight.ZigbeeCommands
 
 open System.Text.Json.Nodes
+open NightLight.Models
 open NightLight.Lights
 
-type ZigbeeCommand = ZigbeeCommand of Topic: string * Payload: string
-
-let internal generateZigbeeCommand friendlyName targetColor targetBrightness =
+let generateZigbeeCommand friendlyName targetColor targetBrightness =
     let commandObj = JsonObject()
 
     match targetColor with
