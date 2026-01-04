@@ -17,13 +17,15 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-type NightLightStateMachine(time: DateTime) =
-    member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, ParseEventError> =
-        result {
-            let partOfDay = getPartOfDay time
+type NightLightStateMachine private (maybeTime: DateTime option) =
+    new() = NightLightStateMachine None
 
-            match event with
-            | ReceivedZigbeeEvent payload ->
+    member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
+        result {
+            let maybePartOfDay = maybeTime |> Option.map getPartOfDay
+
+            match event, maybePartOfDay with
+            | ReceivedZigbeeEvent payload, Some partOfDay ->
                 let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
                 return
@@ -35,14 +37,15 @@ type NightLightStateMachine(time: DateTime) =
                         match maybeLight with
                         | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                         | None -> Seq.empty
-            | TimeChanged newTime ->
-                let newState = NightLightStateMachine newTime
+            | TimeChanged newTime, maybePartOfDay ->
+                let newState = NightLightStateMachine(Some newTime)
                 let newPartOfDay = getPartOfDay newTime
 
                 return
                     newState,
-                    if partOfDay <> newPartOfDay then
+                    if maybePartOfDay <> Some newPartOfDay then
                         lights |> Seq.map (generateZigbeeCommandToFixLight newPartOfDay)
                     else
                         Seq.empty
+            | _, None -> return! Error TimeIsUnknown
         }

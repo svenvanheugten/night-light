@@ -17,7 +17,9 @@ type ParseZigbeeEventError =
     | InvalidFriendlyNameField
     | UnknownType
 
-type ParseEventError = ParseZigbeeEventError of ParseZigbeeEventError
+type OnEventReceivedError =
+    | ParseZigbeeEventError of ParseZigbeeEventError
+    | TimeIsUnknown
 
 type Room =
     | Bathroom

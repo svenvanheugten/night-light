@@ -27,22 +27,22 @@ module InteractionsHelpers =
 [<Properties(Arbitrary = [| typeof<Arbitraries> |])>]
 type NightLightTests() =
     [<Property>]
-    let ``Brightness should always be under 255`` (now: DateTime) (interactions: Interaction list) =
-        let fakeHome = FakeHome now
+    let ``Brightness should always be under 255`` (interactions: Interaction list) =
+        let fakeHome = FakeHome()
         fakeHome.Interact interactions
         fakeHome.ForAllLightsThatAreOn(fun (_, brightness, _) -> brightness < 255uy)
 
     [<Property>]
-    let ``Lights should be red during the night`` (now: DateTime) (interactions: Interaction list) =
-        let fakeHome = FakeHome now
+    let ``Lights should be red during the night`` (interactions: Interaction list) =
+        let fakeHome = FakeHome()
         fakeHome.Interact interactions
 
         InteractionsHelpers.isNightAfter interactions
         ==> fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
 
     [<Property>]
-    let ``Lights should be white or yellow during the day`` (now: DateTime) (interactions: Interaction list) =
-        let fakeHome = FakeHome now
+    let ``Lights should be white or yellow during the day`` (interactions: Interaction list) =
+        let fakeHome = FakeHome()
         fakeHome.Interact interactions
 
         InteractionsHelpers.isDayAfter interactions

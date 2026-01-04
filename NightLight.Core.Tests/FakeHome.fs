@@ -43,8 +43,8 @@ type FakeLight(light: Light) =
         if hasPower then
             color <- newColor
 
-type FakeHome(now: DateTime) =
-    let mutable nightLightStateMachine = NightLightStateMachine now
+type FakeHome() =
+    let mutable nightLightStateMachine = NightLightStateMachine()
 
     let assertIsOkAndGet result =
         match result with
