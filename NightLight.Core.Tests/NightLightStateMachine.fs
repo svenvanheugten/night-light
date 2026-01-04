@@ -7,7 +7,7 @@ open NightLight.Core.Models
 open NightLight.Core.Core
 
 type NightLightStateMachine(now: DateTime) =
-    let mutable state = { Time = now }
+    let mutable state = State now
 
     let transmittedCommands = new List<Message>()
 
@@ -18,7 +18,7 @@ type NightLightStateMachine(now: DateTime) =
 
     let sendEvent event =
         result {
-            let! newState, commands = onEventReceived state event
+            let! newState, commands = state.OnEventReceived event
             state <- newState
             transmittedCommands.AddRange commands
         }

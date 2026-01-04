@@ -77,7 +77,7 @@ let mainAsync _ =
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
         let stateLock = new SemaphoreSlim(1, 1)
-        let mutable state = { Time = DateTime.Now }
+        let mutable state = State DateTime.Now
 
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
             async {
