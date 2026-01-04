@@ -17,8 +17,8 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-type State(time: DateTime) =
-    member this.OnEventReceived(event: Event) : Result<State * Message seq, ParseEventError> =
+type NightLightStateMachine(time: DateTime) =
+    member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, ParseEventError> =
         result {
             let partOfDay = getPartOfDay time
 
@@ -36,7 +36,7 @@ type State(time: DateTime) =
                         | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                         | None -> Seq.empty
             | TimeChanged newTime ->
-                let newState = State newTime
+                let newState = NightLightStateMachine newTime
                 let newPartOfDay = getPartOfDay newTime
 
                 return

@@ -11,7 +11,7 @@
         <Compile Include="Moods.fs" />
         <Compile Include="ZigbeeEvents.fs" />
         <Compile Include="ZigbeeCommands.fs" />
-        <Compile Include="Core.fs" />
+        <Compile Include="NightLightStateMachine.fs" />
     </ItemGroup>
 
     <ItemGroup>

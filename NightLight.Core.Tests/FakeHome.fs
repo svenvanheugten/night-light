@@ -34,7 +34,7 @@ type FakeLight(light: Light) =
             brightness <- newBrightness
 
 type FakeHome(now: DateTime) =
-    let mutable nightLightStateMachine = State now
+    let mutable nightLightStateMachine = NightLightStateMachine now
 
     let assertIsOkAndGet result =
         match result with
