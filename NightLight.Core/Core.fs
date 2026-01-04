@@ -1,11 +1,10 @@
-module NightLight.Core
+module NightLight.Core.Core
 
-open NightLight.PartsOfDay
-open NightLight.ZigbeeEvents
-open NightLight.ZigbeeCommands
-open NightLight.Moods
-open NightLight.Lights
-open NightLight.Configuration
+open NightLight.Core.Models
+open NightLight.Core.PartsOfDay
+open NightLight.Core.ZigbeeEvents
+open NightLight.Core.ZigbeeCommands
+open NightLight.Core.Moods
 open FsToolkit.ErrorHandling
 
 let internal tryFindLight friendlyName =
@@ -17,19 +16,31 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
 
     generateZigbeeCommand light.FriendlyName color brightness
 
-let onZigbeeEventReceived (partOfDay: PartOfDay) (decodedPayload: string) =
+let onEventReceived (state: State) (event: Event) : Result<State * Message seq, ParseEventError> =
     result {
-        let! zigbeeEvent = parseZigbeeEvent decodedPayload
+        let partOfDay = getPartOfDay state.Time
 
-        return
-            match zigbeeEvent with
-            | DeviceAnnounce friendlyName ->
-                let maybeLight = tryFindLight friendlyName
+        match event with
+        | ReceivedZigbeeEvent payload ->
+            let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
-                match maybeLight with
-                | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
-                | None -> Seq.empty
+            return
+                state,
+                match zigbeeEvent with
+                | DeviceAnnounce friendlyName ->
+                    let maybeLight = tryFindLight friendlyName
+
+                    match maybeLight with
+                    | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
+                    | None -> Seq.empty
+        | TimeChanged time ->
+            let newState = { Time = time }
+            let newPartOfDay = getPartOfDay time
+
+            return
+                newState,
+                if partOfDay <> newPartOfDay then
+                    lights |> Seq.map (generateZigbeeCommandToFixLight newPartOfDay)
+                else
+                    Seq.empty
     }
-
-let onPartOfDayChanged (partOfDay: PartOfDay) =
-    lights |> Seq.map (generateZigbeeCommandToFixLight partOfDay)

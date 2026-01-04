@@ -1,16 +1,12 @@
-module internal NightLight.Moods
+module internal NightLight.Core.Moods
 
-open NightLight.PartsOfDay
+open NightLight.Core.PartsOfDay
+open NightLight.Core.Models
 
 type Mood =
     | White
     | Yellow
     | Red
-
-type Room =
-    | Bathroom
-    | LivingRoom
-    | Bedroom
 
 let getDesiredMood room partOfDay =
     match room, partOfDay with
@@ -18,3 +14,22 @@ let getDesiredMood room partOfDay =
     | LivingRoom, Day -> Yellow
     | Bedroom, Day -> Yellow
     | _, Night -> Red
+
+type Color =
+    | ColorByCoordinates of float * float
+    | ColorByTemperature of int
+
+type Brightness = Brightness of int
+
+let getDesiredColorAndBrightness bulb mood =
+    let white = ColorByCoordinates(0.3227, 0.329)
+    let yellow = ColorByTemperature 454
+    let red = ColorByCoordinates(0.6942, 0.2963)
+
+    match bulb, mood with
+    | IkeaBulb, White -> white, Brightness 254
+    | IkeaBulb, Yellow -> yellow, Brightness 210
+    | IkeaBulb, Red -> red, Brightness 254
+    | PaulmannBulb, White -> white, Brightness 35
+    | PaulmannBulb, Yellow -> yellow, Brightness 35
+    | PaulmannBulb, Red -> red, Brightness 80

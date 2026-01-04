@@ -1,55 +1,58 @@
 ﻿open System
 open System.Text
+open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 open MQTTnet
 open MQTTnet.Protocol
-open NightLight.PartsOfDay
-open NightLight.ZigbeeEvents
-open NightLight.ZigbeeCommands
-open NightLight.Core
+open NightLight.Core.Models
+open NightLight.Core.Core
 
 let private generateMqttMessage zigbeeCommand =
-    match zigbeeCommand with
-    | ZigbeeCommand(topic, payload) ->
-        MqttApplicationMessageBuilder()
-            .WithTopic(topic)
-            .WithPayload(payload)
-            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
-            .Build()
+    MqttApplicationMessageBuilder()
+        .WithTopic(zigbeeCommand.Topic)
+        .WithPayload(zigbeeCommand.Payload)
+        .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+        .Build()
 
-let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (commands: ZigbeeCommand seq) =
+let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (commands: Message seq) =
     async {
         commands
         |> Seq.iter (fun command ->
-            match command with
-            | ZigbeeCommand(topic, payload) ->
-                logger.LogInformation("Publishing message {Payload} to topic {Topic}...", payload, topic))
+            logger.LogInformation("Publishing message {Payload} to topic {Topic}...", command.Payload, command.Topic))
 
         return!
             commands
             |> Seq.map generateMqttMessage
-            |> Seq.map mqttClient.PublishAsync
-            |> Seq.map Async.AwaitTask
+            |> Seq.map (fun message -> async { return! mqttClient.PublishAsync message |> Async.AwaitTask })
             |> Async.Sequential
             |> Async.Ignore
     }
 
-let private onMqttMessageReceived (mqttClient: IMqttClient) (logger: ILogger) (message: MqttApplicationMessage) =
+let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: State) (event: Event) =
+    match event with
+    | ReceivedZigbeeEvent payload -> logger.LogInformation("Received message with payload {Payload}", payload)
+    | _ -> ()
+
+    let result = event |> onEventReceived state
+
+    match result with
+    | Ok(newState, commands) ->
+        async {
+            do! publishZigbeeCommands mqttClient logger commands
+            return newState
+        }
+    | Error(ParseZigbeeEventError UnknownType) -> async.Return state
+    | Error e ->
+        logger.LogError("Error {Error} while {Event}", e, event)
+        async.Return state
+
+let private decodeMqttApplicationMessage (message: MqttApplicationMessage) =
     let payload = message.Payload
     let decodedPayload = Encoding.UTF8.GetString(&payload)
 
-    logger.LogInformation("Received message with payload {Payload}", decodedPayload)
-
-    let commandsResult =
-        decodedPayload |> onZigbeeEventReceived (getPartOfDay DateTime.Now)
-
-    match commandsResult with
-    | Ok commands -> publishZigbeeCommands mqttClient logger commands
-    | Error UnknownType -> async.Return()
-    | Error e ->
-        logger.LogError("Error {Error} while processing {Payload}", e, payload)
-        async.Return()
+    { Topic = message.Topic
+      Payload = decodedPayload }
 
 [<EntryPoint>]
 let mainAsync _ =
@@ -73,8 +76,21 @@ let mainAsync _ =
 
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
+        let stateLock = new SemaphoreSlim(1, 1)
+        let mutable state = { Time = DateTime.Now }
+
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
-            onMqttMessageReceived mqttClient logger e.ApplicationMessage
+            async {
+                let event = ReceivedZigbeeEvent <| decodeMqttApplicationMessage e.ApplicationMessage
+
+                do! stateLock.WaitAsync() |> Async.AwaitTask
+
+                try
+                    let! newState = event |> handleEvent mqttClient logger state
+                    state <- newState
+                finally
+                    stateLock.Release() |> ignore
+            }
             |> Async.StartAsTask
             :> Task)
 
@@ -85,14 +101,14 @@ let mainAsync _ =
             |> Async.AwaitTask
             |> Async.Ignore
 
-        let mutable previousPartOfDay: PartOfDay option = None
-
         while true do
-            let currentPartOfDay = getPartOfDay DateTime.Now
+            do! stateLock.WaitAsync() |> Async.AwaitTask
 
-            if previousPartOfDay <> Some currentPartOfDay then
-                do! onPartOfDayChanged currentPartOfDay |> publishZigbeeCommands mqttClient logger
-                previousPartOfDay <- Some currentPartOfDay
+            try
+                let! newState = TimeChanged DateTime.Now |> handleEvent mqttClient logger state
+                state <- newState
+            finally
+                stateLock.Release() |> ignore
 
             do! Async.Sleep 10_000
 
