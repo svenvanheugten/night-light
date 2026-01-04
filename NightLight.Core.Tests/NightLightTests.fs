@@ -4,6 +4,26 @@ open System
 open FsCheck.Xunit
 open FsCheck.FSharp
 
+module InteractionsHelpers =
+    let getTimeAfter interactions =
+        interactions
+        |> Seq.choose (fun interaction ->
+            match interaction with
+            | TimeChanged time -> Some time
+            | _ -> None)
+        |> Seq.tryLast
+        |> function
+            | Some time -> time
+            | None -> failwith "Time wasn't changed"
+
+    let isDayAfter interactions =
+        let time = getTimeAfter interactions
+
+        time.TimeOfDay >= TimeSpan.FromHours 5.5
+        && time.TimeOfDay < TimeSpan.FromHours 20.5
+
+    let isNightAfter = not << isDayAfter
+
 [<Properties(Arbitrary = [| typeof<Arbitraries> |])>]
 type NightLightTests() =
     [<Property>]
@@ -17,7 +37,7 @@ type NightLightTests() =
         let fakeHome = FakeHome now
         fakeHome.Interact interactions
 
-        fakeHome.IsNight()
+        InteractionsHelpers.isNightAfter interactions
         ==> fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
 
     [<Property>]
@@ -25,5 +45,5 @@ type NightLightTests() =
         let fakeHome = FakeHome now
         fakeHome.Interact interactions
 
-        fakeHome.IsDay()
+        InteractionsHelpers.isDayAfter interactions
         ==> fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = White || color = Yellow)
