@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="NightLightStateMachine.fs" />
         <Compile Include="FakeHome.fs" />
         <Compile Include="Arbitraries.fs" />
         <Compile Include="NightLightTests.fs" />

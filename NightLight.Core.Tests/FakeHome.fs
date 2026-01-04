@@ -3,6 +3,7 @@ namespace NightLight.Core.Tests
 open System
 open System.Text.RegularExpressions
 open NightLight.Core.Models
+open NightLight.Core.Core
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
@@ -33,7 +34,12 @@ type FakeLight(light: Light) =
             brightness <- newBrightness
 
 type FakeHome(now: DateTime) =
-    let nightLightStateMachine = NightLightStateMachine now
+    let mutable nightLightStateMachine = State now
+
+    let assertIsOkAndGet result =
+        match result with
+        | Ok value -> value
+        | Error error -> failwith $"Expected Ok, got Error {error}"
 
     let friendlyNameToFakeLight =
         lights
@@ -57,6 +63,13 @@ type FakeHome(now: DateTime) =
         }
         |> ignore
 
+    let sendEvent event =
+        let newState, commands =
+            event |> nightLightStateMachine.OnEventReceived |> assertIsOkAndGet
+
+        commands |> Seq.iter processCommand
+        nightLightStateMachine <- newState
+
     member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
 
     member _.Interact(interaction: Interaction) =
@@ -70,9 +83,7 @@ type FakeHome(now: DateTime) =
                     ""type"": ""device_announce"",
                     ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
                   }}" }
-            |> nightLightStateMachine.SendMessage
+            |> ReceivedZigbeeEvent
+            |> sendEvent
         | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
-        | TimeChanged time -> nightLightStateMachine.ChangeTime time
-
-        nightLightStateMachine.TransmittedCommands |> Seq.iter processCommand
-        nightLightStateMachine.ClearTransmittedCommands()
+        | TimeChanged time -> time |> Event.TimeChanged |> sendEvent
