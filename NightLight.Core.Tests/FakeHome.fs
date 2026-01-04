@@ -3,7 +3,6 @@ namespace NightLight.Core.Tests
 open System
 open System.Text.RegularExpressions
 open NightLight.Core.Models
-open NightLight.Core.Core
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
@@ -43,22 +42,20 @@ type FakeLight(light: Light) =
         if hasPower then
             color <- newColor
 
-type FakeHome(now: DateTime) =
-    let mutable time = now
-
-    let mutable nightLightStateMachine = NightLightStateMachine now
-
-    let assertIsOkAndGet result =
-        match result with
-        | Ok value -> value
-        | Error error -> failwith $"Expected Ok, got Error {error}"
-
+type FakeHome() =
     let friendlyNameToFakeLight =
         lights
         |> Seq.map (fun light -> light.FriendlyName, FakeLight light)
         |> Map.ofSeq
 
-    let processCommand command =
+    let onEventPublished = new Event<Event>()
+
+    member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
+
+    [<CLIEvent>]
+    member _.OnEventPublished = onEventPublished.Publish
+
+    member _.ProcessCommand(command: Message) =
         option {
             let! friendlyName =
                 let m = Regex.Match(command.Topic, "^zigbee2mqtt/(.+)/set$")
@@ -88,17 +85,6 @@ type FakeHome(now: DateTime) =
         }
         |> ignore
 
-    let sendEvent event =
-        let newState, commands =
-            event |> nightLightStateMachine.OnEventReceived |> assertIsOkAndGet
-
-        commands |> Seq.iter processCommand
-        nightLightStateMachine <- newState
-
-    member _.Time = time
-
-    member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
-
     member _.Interact(interaction: Interaction) =
         match interaction with
         | HumanInteraction(LightTurnedOn light) ->
@@ -111,11 +97,9 @@ type FakeHome(now: DateTime) =
                     ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
                   }}" }
             |> ReceivedZigbeeEvent
-            |> sendEvent
+            |> onEventPublished.Trigger
         | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
-        | TimeChanged newTime ->
-            time <- newTime
-            newTime |> Event.TimeChanged |> sendEvent
+        | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger
 
 type FakeHome with
     member this.Interact(interactions: Interaction seq) = interactions |> Seq.iter this.Interact
@@ -127,9 +111,3 @@ type FakeHome with
             | On(brightness, color) -> Some(light, brightness, color)
             | Off -> None)
         |> Seq.forall condition
-
-    member this.IsDay() =
-        this.Time.TimeOfDay >= TimeSpan.FromHours 5.5
-        && this.Time.TimeOfDay < TimeSpan.FromHours 20.5
-
-    member this.IsNight() = not (this.IsDay())
