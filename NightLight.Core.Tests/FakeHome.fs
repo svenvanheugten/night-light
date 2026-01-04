@@ -44,6 +44,8 @@ type FakeLight(light: Light) =
             color <- newColor
 
 type FakeHome(now: DateTime) =
+    let mutable time = now
+
     let mutable nightLightStateMachine = NightLightStateMachine now
 
     let assertIsOkAndGet result =
@@ -93,6 +95,8 @@ type FakeHome(now: DateTime) =
         commands |> Seq.iter processCommand
         nightLightStateMachine <- newState
 
+    member _.Time = time
+
     member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
 
     member _.Interact(interaction: Interaction) =
@@ -109,4 +113,23 @@ type FakeHome(now: DateTime) =
             |> ReceivedZigbeeEvent
             |> sendEvent
         | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
-        | TimeChanged time -> time |> Event.TimeChanged |> sendEvent
+        | TimeChanged newTime ->
+            time <- newTime
+            newTime |> Event.TimeChanged |> sendEvent
+
+type FakeHome with
+    member this.Interact(interactions: Interaction seq) = interactions |> Seq.iter this.Interact
+
+    member this.ForAllLightsThatAreOn condition =
+        this.LightStates
+        |> Seq.choose (fun (light, state) ->
+            match state with
+            | On(brightness, color) -> Some(light, brightness, color)
+            | Off -> None)
+        |> Seq.forall condition
+
+    member this.IsDay() =
+        this.Time.TimeOfDay >= TimeSpan.FromHours 5.5
+        && this.Time.TimeOfDay < TimeSpan.FromHours 20.5
+
+    member this.IsNight() = not (this.IsDay())
