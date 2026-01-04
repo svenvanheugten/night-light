@@ -11,12 +11,18 @@ type NightLightStateMachine(now: DateTime) =
 
     let transmittedCommands = new List<Message>()
 
+    let assertIsOk (result: Result<unit, 'a>) : unit =
+        match result with
+        | Ok() -> ()
+        | Error error -> failwith $"Expected Ok, got Error {error}"
+
     let sendEvent event =
         result {
             let! newState, commands = onEventReceived state event
             state <- newState
             transmittedCommands.AddRange commands
         }
+        |> assertIsOk
 
     member _.TransmittedCommands = transmittedCommands.AsReadOnly()
 

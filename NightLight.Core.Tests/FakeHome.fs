@@ -59,23 +59,20 @@ type FakeHome(now: DateTime) =
 
     member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
 
-    member _.Interact(interaction: Interaction) : Result<unit, ParseEventError> =
-        result {
-            match interaction with
-            | HumanInteraction(LightTurnedOn light) ->
-                friendlyNameToFakeLight[light.FriendlyName].TurnOn()
+    member _.Interact(interaction: Interaction) =
+        match interaction with
+        | HumanInteraction(LightTurnedOn light) ->
+            friendlyNameToFakeLight[light.FriendlyName].TurnOn()
 
-                do!
-                    { Topic = "zigbee2mqtt/bridge/event"
-                      Payload =
-                        $@"{{
-                            ""type"": ""device_announce"",
-                            ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
-                          }}" }
-                    |> nightLightStateMachine.SendMessage
-            | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
-            | TimeChanged time -> do! nightLightStateMachine.ChangeTime time
+            { Topic = "zigbee2mqtt/bridge/event"
+              Payload =
+                $@"{{
+                    ""type"": ""device_announce"",
+                    ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
+                  }}" }
+            |> nightLightStateMachine.SendMessage
+        | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
+        | TimeChanged time -> nightLightStateMachine.ChangeTime time
 
-            nightLightStateMachine.TransmittedCommands |> Seq.iter processCommand
-            nightLightStateMachine.ClearTransmittedCommands()
-        }
+        nightLightStateMachine.TransmittedCommands |> Seq.iter processCommand
+        nightLightStateMachine.ClearTransmittedCommands()
