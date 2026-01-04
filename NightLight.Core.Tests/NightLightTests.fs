@@ -11,6 +11,6 @@ type NightLightTests() =
         fakeHome.LightStates
         |> Seq.choose (fun (_, state) ->
             match state with
-            | On brightness -> Some brightness
+            | On(brightness, _) -> Some brightness
             | Off -> None)
         |> Seq.forall (fun brightness -> brightness < 255uy)

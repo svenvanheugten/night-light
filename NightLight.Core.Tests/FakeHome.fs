@@ -15,15 +15,21 @@ type Interaction =
     | HumanInteraction of HumanInteraction
     | TimeChanged of DateTime
 
+type Color =
+    | White
+    | Yellow
+    | Red
+
 type LightState =
     | Off
-    | On of Brightness: byte
+    | On of Brightness: byte * Color: Color
 
 type FakeLight(light: Light) =
     let mutable hasPower = false
     let mutable brightness: byte = 255uy
+    let mutable color: Color = White
 
-    member _.LightWithState = light, if hasPower then On brightness else Off
+    member _.LightWithState = light, if hasPower then On(brightness, color) else Off
 
     member _.TurnOn() = hasPower <- true
 
@@ -32,6 +38,10 @@ type FakeLight(light: Light) =
     member _.SetBrightness(newBrightness: byte) =
         if hasPower then
             brightness <- newBrightness
+
+    member _.SetColor(newColor: Color) =
+        if hasPower then
+            color <- newColor
 
 type FakeHome(now: DateTime) =
     let mutable nightLightStateMachine = NightLightStateMachine now
@@ -60,6 +70,19 @@ type FakeHome(now: DateTime) =
             | Some(JsonValue.Number newBrightness) -> fakeLight.SetBrightness(byte newBrightness)
             | None -> ()
             | value -> failwith $"Unexpected brightness value {value}"
+
+            match parsedPayload.TryGetProperty "color" with
+            | Some color ->
+                match color.TryGetProperty "x", color.TryGetProperty "y" with
+                | Some(JsonValue.Number 0.3227M), Some(JsonValue.Number 0.329M) -> fakeLight.SetColor White
+                | Some(JsonValue.Number 0.6942M), Some(JsonValue.Number 0.2963M) -> fakeLight.SetColor Red
+                | _ -> failwith $"Unexpected color value {color}"
+            | None -> ()
+
+            match parsedPayload.TryGetProperty "color_temp" with
+            | Some(JsonValue.Number temperature) when temperature = 454M -> fakeLight.SetColor Yellow
+            | None -> ()
+            | value -> failwith $"Unexpected color temperature value {value}"
         }
         |> ignore
 
