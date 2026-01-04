@@ -3,7 +3,7 @@ WORKDIR /app
 COPY NightLight.sln ./
 COPY NightLight.Core/NightLight.Core.fsproj NightLight.Core/
 COPY NightLight/NightLight.fsproj NightLight/
-RUN dotnet restore
+RUN dotnet restore NightLight/NightLight.fsproj
 COPY . ./
 RUN dotnet publish NightLight/NightLight.fsproj --no-restore -c Release -o out
 
