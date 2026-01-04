@@ -3,7 +3,6 @@ namespace NightLight.Core.Tests
 open System
 open System.Text.RegularExpressions
 open NightLight.Core.Models
-open NightLight.Core.Core
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
@@ -44,19 +43,19 @@ type FakeLight(light: Light) =
             color <- newColor
 
 type FakeHome() =
-    let mutable nightLightStateMachine = NightLightStateMachine()
-
-    let assertIsOkAndGet result =
-        match result with
-        | Ok value -> value
-        | Error error -> failwith $"Expected Ok, got Error {error}"
-
     let friendlyNameToFakeLight =
         lights
         |> Seq.map (fun light -> light.FriendlyName, FakeLight light)
         |> Map.ofSeq
 
-    let processCommand command =
+    let onEventPublished = new Event<Event>()
+
+    member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
+
+    [<CLIEvent>]
+    member _.OnEventPublished = onEventPublished.Publish
+
+    member _.ProcessCommand(command: Message) =
         option {
             let! friendlyName =
                 let m = Regex.Match(command.Topic, "^zigbee2mqtt/(.+)/set$")
@@ -86,15 +85,6 @@ type FakeHome() =
         }
         |> ignore
 
-    let sendEvent event =
-        let newState, commands =
-            event |> nightLightStateMachine.OnEventReceived |> assertIsOkAndGet
-
-        commands |> Seq.iter processCommand
-        nightLightStateMachine <- newState
-
-    member _.LightStates = friendlyNameToFakeLight.Values |> Seq.map _.LightWithState
-
     member _.Interact(interaction: Interaction) =
         match interaction with
         | HumanInteraction(LightTurnedOn light) ->
@@ -107,9 +97,9 @@ type FakeHome() =
                     ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
                   }}" }
             |> ReceivedZigbeeEvent
-            |> sendEvent
+            |> onEventPublished.Trigger
         | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
-        | TimeChanged newTime -> newTime |> Event.TimeChanged |> sendEvent
+        | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger
 
 type FakeHome with
     member this.Interact(interactions: Interaction seq) = interactions |> Seq.iter this.Interact
