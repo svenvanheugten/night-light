@@ -29,12 +29,12 @@ let private publishZigbeeCommands (mqttClient: IMqttClient) (logger: ILogger) (c
             |> Async.Ignore
     }
 
-let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: State) (event: Event) =
+let private handleEvent (mqttClient: IMqttClient) (logger: ILogger) (state: NightLightStateMachine) (event: Event) =
     match event with
     | ReceivedZigbeeEvent payload -> logger.LogInformation("Received message with payload {Payload}", payload)
     | _ -> ()
 
-    let result = event |> onEventReceived state
+    let result = event |> state.OnEventReceived
 
     match result with
     | Ok(newState, commands) ->
@@ -77,7 +77,7 @@ let mainAsync _ =
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
         let stateLock = new SemaphoreSlim(1, 1)
-        let mutable state = { Time = DateTime.Now }
+        let mutable state = NightLightStateMachine DateTime.Now
 
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
             async {
