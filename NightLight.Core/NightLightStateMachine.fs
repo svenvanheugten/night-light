@@ -11,14 +11,19 @@ open FsToolkit.ErrorHandling
 let internal tryFindLight friendlyName =
     Seq.tryFind (fun light -> light.FriendlyName = friendlyName) lights
 
-let internal generateZigbeeCommandToFixLight partOfDay light =
-    let color, brightness =
-        getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
+let internal generateZigbeeCommandsToFixLight state partOfDay light =
+    seq {
+        yield generateStateCommand state light
 
-    generateZigbeeCommand light.FriendlyName color brightness
+        if state = On then
+            let color, brightness =
+                getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
 
-type NightLightStateMachine private (maybeTime: DateTime option) =
-    new() = NightLightStateMachine None
+            yield generateZigbeeCommand color brightness light
+    }
+
+type NightLightStateMachine private (maybeTime: DateTime option, lightToState: Map<Light, State>) =
+    new() = NightLightStateMachine(None, lights |> Seq.map (fun light -> light, On) |> Map.ofSeq)
 
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
@@ -29,22 +34,39 @@ type NightLightStateMachine private (maybeTime: DateTime option) =
                 let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
                 return
-                    this,
                     match zigbeeEvent with
                     | DeviceAnnounce friendlyName ->
                         let maybeLight = tryFindLight friendlyName
 
+                        this,
                         match maybeLight with
-                        | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
+                        | Some light -> generateZigbeeCommandsToFixLight lightToState[light] partOfDay light
                         | None -> Seq.empty
+                    | ButtonPress action ->
+                        let desiredLightState =
+                            match action with
+                            | PressedOn -> On
+                            | PressedOff -> Off
+
+                        let remoteControlledLights = lights |> Seq.filter _.ControlledWithRemote
+
+                        let newLightToState =
+                            remoteControlledLights
+                            |> Seq.fold (fun acc key -> Map.add key desiredLightState acc) lightToState
+
+                        NightLightStateMachine(maybeTime, newLightToState),
+                        remoteControlledLights
+                        |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight desiredLightState partOfDay light)
             | TimeChanged newTime, maybePartOfDay ->
-                let newState = NightLightStateMachine(Some newTime)
+                let newState = NightLightStateMachine(Some newTime, lightToState)
                 let newPartOfDay = getPartOfDay newTime
 
                 return
                     newState,
                     if maybePartOfDay <> Some newPartOfDay then
-                        lights |> Seq.map (generateZigbeeCommandToFixLight newPartOfDay)
+                        lights
+                        |> Seq.collect (fun light ->
+                            generateZigbeeCommandsToFixLight lightToState[light] newPartOfDay light)
                     else
                         Seq.empty
             | _, None -> return! Error TimeIsUnknown

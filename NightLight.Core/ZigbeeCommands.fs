@@ -4,7 +4,28 @@ open System.Text.Json.Nodes
 open NightLight.Core.Models
 open NightLight.Core.Moods
 
-let generateZigbeeCommand (friendlyName: DeviceFriendlyName) targetColor targetBrightness =
+type State =
+    | On
+    | Off
+
+let toZigbeeCommand light payload =
+    let topic = $"zigbee2mqtt/{light.FriendlyName.Get}/set"
+    { Topic = topic; Payload = payload }
+
+let generateStateCommand state light =
+    let commandObj = JsonObject()
+
+    commandObj["state"] <-
+        match state with
+        | On -> "ON"
+        | Off -> "OFF"
+
+    if light.Bulb = IkeaBulb then
+        commandObj["transition"] <- 0
+
+    commandObj.ToJsonString() |> toZigbeeCommand light
+
+let generateZigbeeCommand targetColor targetBrightness light =
     let commandObj = JsonObject()
 
     match targetColor with
@@ -19,7 +40,4 @@ let generateZigbeeCommand (friendlyName: DeviceFriendlyName) targetColor targetB
         match targetBrightness with
         | Brightness b -> b
 
-    let topic = $"zigbee2mqtt/{friendlyName.Get}/set"
-    let payload = commandObj.ToJsonString()
-
-    { Topic = topic; Payload = payload }
+    commandObj.ToJsonString() |> toZigbeeCommand light

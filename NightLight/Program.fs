@@ -104,8 +104,9 @@ let mainAsync _ =
         do! mqttClient.ConnectAsync mqttClientOptions |> Async.AwaitTask |> Async.Ignore
 
         do!
-            mqttClient.SubscribeAsync "zigbee2mqtt/bridge/event"
-            |> Async.AwaitTask
+            [ "zigbee2mqtt/bridge/event"; $"zigbee2mqtt/{remoteControlFriendlyName.Get}" ]
+            |> Seq.map (fun topic -> async { return! mqttClient.SubscribeAsync topic |> Async.AwaitTask })
+            |> Async.Sequential
             |> Async.Ignore
 
         while true do

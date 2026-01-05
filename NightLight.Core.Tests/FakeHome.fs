@@ -7,8 +7,10 @@ open FsToolkit.ErrorHandling
 open FSharp.Data
 
 type HumanInteraction =
-    | LightTurnedOn of Light
-    | LightTurnedOff of Light
+    | LightPoweredOn of Light
+    | LightPoweredOff of Light
+    | RemotePressedOnButton
+    | RemotePressedOffButton
 
 type Interaction =
     | HumanInteraction of HumanInteraction
@@ -25,18 +27,27 @@ type LightState =
 
 type FakeLight(light: Light) =
     let mutable hasPower = false
+    let mutable state = true
     let mutable brightness: byte = 255uy
     let mutable color: Color = White
 
-    member _.LightWithState = light, if hasPower then On(brightness, color) else Off
+    member _.LightWithState =
+        light, if hasPower && state then On(brightness, color) else Off
 
-    member _.TurnOn() = hasPower <- true
+    member _.PowerOn() = hasPower <- true
 
-    member _.TurnOff() = hasPower <- false
+    member _.PowerOff() = hasPower <- false
+
+    member _.SetState(newState: bool) =
+        if hasPower then
+            state <- newState
 
     member _.SetBrightness(newBrightness: byte) =
         if hasPower then
             brightness <- newBrightness
+
+            if light.Bulb = IkeaBulb then
+                state <- true
 
     member _.SetColor(newColor: Color) =
         if hasPower then
@@ -69,6 +80,12 @@ type FakeHome() =
 
             let parsedPayload = JsonValue.Parse command.Payload
 
+            match parsedPayload.TryGetProperty "state" with
+            | Some(JsonValue.String "ON") -> fakeLight.SetState true
+            | Some(JsonValue.String "OFF") -> fakeLight.SetState false
+            | None -> ()
+            | value -> failwith $"Unexpected state value {value}"
+
             match parsedPayload.TryGetProperty "brightness" with
             | Some(JsonValue.Number newBrightness) -> fakeLight.SetBrightness(byte newBrightness)
             | None -> ()
@@ -91,8 +108,8 @@ type FakeHome() =
 
     member _.Interact(interaction: Interaction) =
         match interaction with
-        | HumanInteraction(LightTurnedOn light) ->
-            friendlyNameToFakeLight[light.FriendlyName].TurnOn()
+        | HumanInteraction(LightPoweredOn light) ->
+            friendlyNameToFakeLight[light.FriendlyName].PowerOn()
 
             { Topic = "zigbee2mqtt/bridge/event"
               Payload =
@@ -102,7 +119,17 @@ type FakeHome() =
                   }}" }
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
-        | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
+        | HumanInteraction(LightPoweredOff light) -> friendlyNameToFakeLight[light.FriendlyName].PowerOff()
+        | HumanInteraction RemotePressedOnButton ->
+            { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
+              Payload = @"{ ""action"": ""on"" }" }
+            |> ReceivedZigbeeEvent
+            |> onEventPublished.Trigger
+        | HumanInteraction RemotePressedOffButton ->
+            { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
+              Payload = @"{ ""action"": ""off"" }" }
+            |> ReceivedZigbeeEvent
+            |> onEventPublished.Trigger
         | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger
 
 type FakeHome with
@@ -114,4 +141,9 @@ type FakeHome with
             match state with
             | On(brightness, color) -> Some(light, brightness, color)
             | Off -> None)
+        |> Seq.forall condition
+
+    member this.ForAllRemotelyControlledLights condition =
+        this.LightStates
+        |> Seq.filter (fst >> _.ControlledWithRemote)
         |> Seq.forall condition
