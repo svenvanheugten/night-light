@@ -44,7 +44,7 @@ type NightLightTests() =
             fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
 
     [<Property>]
-    let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed again``
+    let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed``
         ()
         =
         genInteractionListContaining
