@@ -22,11 +22,11 @@ type NightLightTests() =
         fakeHome
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractionListThatEndsDuringTheDay> |])>]
-    let ``Lights should be white or yellow during the day`` (interactions: Interaction list) =
+    let ``All lights that are on should be white or yellow during the day`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
         fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = White || color = Yellow)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractionListThatEndsDuringTheNight> |])>]
-    let ``Lights should be red during the night`` (interactions: Interaction list) =
+    let ``All lights that are on should be red during the night`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
         fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
