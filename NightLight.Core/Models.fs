@@ -9,6 +9,7 @@ type Event =
     | TimeChanged of DateTime
 
 type ParseZigbeeEventError =
+    | UnknownTopic
     | InvalidJson
     | MissingTypeField
     | MissingDataField
@@ -16,6 +17,8 @@ type ParseZigbeeEventError =
     | InvalidTypeField
     | InvalidFriendlyNameField
     | UnknownType
+    | MissingActionField
+    | InvalidActionField
 
 type OnEventReceivedError =
     | ParseZigbeeEventError of ParseZigbeeEventError
@@ -40,21 +43,29 @@ type DeviceFriendlyName =
 type Light =
     { FriendlyName: DeviceFriendlyName
       Room: Room
-      Bulb: Bulb }
+      Bulb: Bulb
+      ControlledWithRemote: bool }
 
 let lights =
     [ { FriendlyName = DeviceFriendlyName "Vardagsrum - Fönsterlampa"
         Room = LivingRoom
-        Bulb = IkeaBulb }
+        Bulb = IkeaBulb
+        ControlledWithRemote = true }
       { FriendlyName = DeviceFriendlyName "Vardagsrum - Vägglampa"
         Room = LivingRoom
-        Bulb = PaulmannBulb }
+        Bulb = PaulmannBulb
+        ControlledWithRemote = false }
       { FriendlyName = DeviceFriendlyName "Vardagsrum - Golvlampa"
         Room = LivingRoom
-        Bulb = PaulmannBulb }
+        Bulb = PaulmannBulb
+        ControlledWithRemote = false }
       { FriendlyName = DeviceFriendlyName "Badrum - Taklampa"
         Room = Bathroom
-        Bulb = IkeaBulb }
+        Bulb = IkeaBulb
+        ControlledWithRemote = false }
       { FriendlyName = DeviceFriendlyName "Sovrum - Nattduksbordlampa"
         Room = Bedroom
-        Bulb = IkeaBulb } ]
+        Bulb = IkeaBulb
+        ControlledWithRemote = true } ]
+
+let remoteControlFriendlyName = DeviceFriendlyName "Fjärrkontroll"

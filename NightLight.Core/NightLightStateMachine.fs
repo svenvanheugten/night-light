@@ -15,7 +15,7 @@ let internal generateZigbeeCommandToFixLight partOfDay light =
     let color, brightness =
         getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
 
-    generateZigbeeCommand light.FriendlyName color brightness
+    generateZigbeeCommand color brightness light
 
 type NightLightStateMachine private (maybeTime: DateTime option) =
     new() = NightLightStateMachine None
@@ -37,6 +37,12 @@ type NightLightStateMachine private (maybeTime: DateTime option) =
                         match maybeLight with
                         | Some light -> generateZigbeeCommandToFixLight partOfDay light |> Seq.singleton
                         | None -> Seq.empty
+                    | ButtonPress action ->
+                        let remoteControlledLights = lights |> Seq.filter _.ControlledWithRemote
+
+                        match action with
+                        | PressedOn -> remoteControlledLights |> Seq.map (generateStateCommand On)
+                        | PressedOff -> remoteControlledLights |> Seq.map (generateStateCommand Off)
             | TimeChanged newTime, maybePartOfDay ->
                 let newState = NightLightStateMachine(Some newTime)
                 let newPartOfDay = getPartOfDay newTime
