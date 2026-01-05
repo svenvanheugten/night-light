@@ -9,6 +9,8 @@ open FSharp.Data
 type HumanInteraction =
     | LightPoweredOn of Light
     | LightPoweredOff of Light
+    | RemotePressedOnButton
+    | RemotePressedOffButton
 
 type Interaction =
     | HumanInteraction of HumanInteraction
@@ -25,14 +27,20 @@ type LightState =
 
 type FakeLight(light: Light) =
     let mutable hasPower = false
+    let mutable state = true
     let mutable brightness: byte = 255uy
     let mutable color: Color = White
 
-    member _.LightWithState = light, if hasPower then On(brightness, color) else Off
+    member _.LightWithState =
+        light, if hasPower && state then On(brightness, color) else Off
 
     member _.PowerOn() = hasPower <- true
 
     member _.PowerOff() = hasPower <- false
+
+    member _.SetState(newState: bool) =
+        if hasPower then
+            state <- newState
 
     member _.SetBrightness(newBrightness: byte) =
         if hasPower then
@@ -69,6 +77,12 @@ type FakeHome() =
 
             let parsedPayload = JsonValue.Parse command.Payload
 
+            match parsedPayload.TryGetProperty "state" with
+            | Some(JsonValue.String "ON") -> fakeLight.SetState true
+            | Some(JsonValue.String "OFF") -> fakeLight.SetState false
+            | None -> ()
+            | value -> failwith $"Unexpected state value {value}"
+
             match parsedPayload.TryGetProperty "brightness" with
             | Some(JsonValue.Number newBrightness) -> fakeLight.SetBrightness(byte newBrightness)
             | None -> ()
@@ -103,6 +117,16 @@ type FakeHome() =
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
         | HumanInteraction(LightPoweredOff light) -> friendlyNameToFakeLight[light.FriendlyName].PowerOff()
+        | HumanInteraction RemotePressedOnButton ->
+            { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
+              Payload = @"{ ""action"": ""on"" }" }
+            |> ReceivedZigbeeEvent
+            |> onEventPublished.Trigger
+        | HumanInteraction RemotePressedOffButton ->
+            { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
+              Payload = @"{ ""action"": ""off"" }" }
+            |> ReceivedZigbeeEvent
+            |> onEventPublished.Trigger
         | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger
 
 type FakeHome with

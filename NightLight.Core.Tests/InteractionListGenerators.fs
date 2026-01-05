@@ -8,11 +8,15 @@ let private genTimeChangedInteraction =
     ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
 
 let private genHumanInteraction =
-    Gen.elements lights
-    |> Gen.bind (fun light ->
-        [ LightPoweredOn light; LightPoweredOff light ]
-        |> Gen.elements
-        |> Gen.map Interaction.HumanInteraction)
+    let genLightInteraction =
+        Gen.elements lights
+        |> Gen.bind (fun light -> Gen.elements [ LightPoweredOn light; LightPoweredOff light ])
+
+    let genRemoteInteraction =
+        Gen.elements [ RemotePressedOnButton; RemotePressedOffButton ]
+
+    Gen.oneof [ genLightInteraction; genRemoteInteraction ]
+    |> Gen.map Interaction.HumanInteraction
 
 let private genInteraction =
     Gen.oneof [ genTimeChangedInteraction; genHumanInteraction ]
