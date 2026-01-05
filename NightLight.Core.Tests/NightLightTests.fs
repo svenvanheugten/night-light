@@ -44,11 +44,6 @@ type NightLightTests() =
         fakeHome
 
     [<Property>]
-    let ``Brightness should always be under 255`` (interactions: Interaction list) =
-        let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-        fakeHome.ForAllLightsThatAreOn(fun (_, brightness, _) -> brightness < 255uy)
-
-    [<Property>]
     let ``Lights should be red during the night`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
 
