@@ -33,6 +33,9 @@ type NightLightTests() =
         |> Seq.tryLast
         |> Option.defaultValue false
 
+    let filterToLightsWithPower interactions lights =
+        lights |> Seq.filter (fst >> doesLightHavePowerAfter interactions)
+
     [<Property>]
     let ``All lights that are on should be white or yellow during the day`` () =
         genTimeChangedToDay
@@ -41,7 +44,9 @@ type NightLightTests() =
         |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+
             fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = White || color = Yellow)
+            |> Prop.trivial (fakeHome.LightStates |> Seq.filter (snd >> _.IsOn) |> Seq.isEmpty)
 
     [<Property>]
     let ``All lights that are on should be red during the night`` () =
@@ -51,7 +56,9 @@ type NightLightTests() =
         |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+
             fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
+            |> Prop.trivial (fakeHome.LightStates |> Seq.filter (snd >> _.IsOn) |> Seq.isEmpty)
 
     [<Property>]
     let ``After pressing 'On' on the remote, the remotely controlled lights that have power should be on until they are powered off or 'Off' is pressed``
@@ -65,11 +72,12 @@ type NightLightTests() =
         |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            let lightsWithPower = fakeHome.LightStates |> filterToLightsWithPower interactions
 
-            fakeHome.LightStates
-            |> Seq.filter (fst >> doesLightHavePowerAfter interactions)
+            lightsWithPower
             |> Seq.map snd
             |> Seq.forall _.IsOn
+            |> Prop.trivial (Seq.isEmpty lightsWithPower)
 
     [<Property>]
     let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed``
@@ -82,4 +90,7 @@ type NightLightTests() =
         |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            let lightsWithPower = fakeHome.LightStates |> filterToLightsWithPower interactions
+
             fakeHome.ForAllRemotelyControlledLights(fun (_, state) -> state = Off)
+            |> Prop.trivial (Seq.isEmpty lightsWithPower)
