@@ -17,25 +17,29 @@ let private genHumanInteraction =
 let private genInteraction =
     Gen.oneof [ genTimeChangedInteraction; genHumanInteraction ]
 
-let private genInteractionsListThatStartsWithTimeChange =
+let private genInteractionsListThatStartsWithTimeChanged =
     gen {
         let! firstInteraction = genTimeChangedInteraction
         let! remainingInteractions = Gen.listOf genInteraction
         return firstInteraction :: remainingInteractions
     }
 
-let private genInteractionsListWhere condition =
-    Gen.listOf (genInteraction |> Gen.filter condition)
+let private genInteractionListContaining containingInteraction afterFilter =
+    gen {
+        let genNonTrivialList =
+            gen {
+                let! before = genInteractionsListThatStartsWithTimeChanged
+                let! after = Gen.listOf (genInteraction |> Gen.filter afterFilter)
+                return before @ containingInteraction :: after
+            }
 
-let genInteractionsListThatEndsAtTime time =
-    let genTrivialList = Gen.constant <| List.singleton (Interaction.TimeChanged time)
+        return!
+            match containingInteraction with
+            | Interaction.TimeChanged _ ->
+                let genTrivialList = Gen.constant <| List.singleton containingInteraction
+                Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
+            | _ -> genNonTrivialList
+    }
 
-    let genNonTrivialList =
-        gen {
-            let! before = genInteractionsListThatStartsWithTimeChange
-            let interactionThatSetsEndTime = Interaction.TimeChanged time
-            let! after = genInteractionsListWhere (not << _.IsTimeChanged)
-            return before @ interactionThatSetsEndTime :: after
-        }
-
-    Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
+let genInteractionListThatEndsAtTime time =
+    genInteractionListContaining (Interaction.TimeChanged time) (not << _.IsTimeChanged)

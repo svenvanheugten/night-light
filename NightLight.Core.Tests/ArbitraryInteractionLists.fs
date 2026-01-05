@@ -8,18 +8,18 @@ let private isDay (time: DateTime) =
     time.TimeOfDay >= TimeSpan.FromHours 5.5
     && time.TimeOfDay < TimeSpan.FromHours 20.5
 
-type ArbitraryInteractionsListThatEndsDuringTheDay =
+type ArbitraryInteractionListThatEndsDuringTheDay =
     static member InteractionsList() =
         ArbMap.defaults
         |> ArbMap.generate<DateTime>
         |> Gen.filter isDay
-        |> Gen.bind genInteractionsListThatEndsAtTime
+        |> Gen.bind genInteractionListThatEndsAtTime
         |> Arb.fromGen
 
-type ArbitraryInteractionsListThatEndsDuringTheNight =
+type ArbitraryInteractionListThatEndsDuringTheNight =
     static member InteractionsList() =
         ArbMap.defaults
         |> ArbMap.generate<DateTime>
         |> Gen.filter (not << isDay)
-        |> Gen.bind genInteractionsListThatEndsAtTime
+        |> Gen.bind genInteractionListThatEndsAtTime
         |> Arb.fromGen
