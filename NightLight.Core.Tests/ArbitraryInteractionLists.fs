@@ -3,6 +3,7 @@ module NightLight.Core.Tests.ArbitraryInteractionLists
 open System
 open FsCheck.FSharp
 open NightLight.Core.Tests.InteractionListGenerators
+open NightLight.Core.Models
 
 let private isDay (time: DateTime) =
     time.TimeOfDay >= TimeSpan.FromHours 5.5

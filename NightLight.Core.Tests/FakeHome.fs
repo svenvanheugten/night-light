@@ -139,3 +139,8 @@ type FakeHome with
             | On(brightness, color) -> Some(light, brightness, color)
             | Off -> None)
         |> Seq.forall condition
+
+    member this.ForAllRemotelyControlledLights condition =
+        this.LightStates
+        |> Seq.filter (fst >> _.ControlledWithRemote)
+        |> Seq.forall condition

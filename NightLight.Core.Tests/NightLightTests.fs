@@ -2,7 +2,10 @@ namespace NightLight.Core.Tests
 
 open NightLight.Core.Core
 open NightLight.Core.Tests.ArbitraryInteractionLists
+open NightLight.Core.Tests.InteractionListGenerators
+open FsCheck
 open FsCheck.Xunit
+open FsCheck.FSharp
 
 type NightLightTests() =
     let createFakeHomeWithNightLightAndInteract (interactions: Interaction list) =
@@ -30,3 +33,16 @@ type NightLightTests() =
     let ``All lights that are on should be red during the night`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
         fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
+
+    [<Property>]
+    let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed again``
+        ()
+        =
+        genInteractionListContaining
+            (HumanInteraction RemotePressedOffButton)
+            ((<>) (HumanInteraction RemotePressedOnButton))
+        |> Arb.fromGen
+        |> Prop.forAll
+        <| fun interactions ->
+            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            fakeHome.ForAllRemotelyControlledLights(fun (_, state) -> state = Off)

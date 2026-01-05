@@ -28,7 +28,7 @@ let private genInteractionsListThatStartsWithTimeChanged =
         return firstInteraction :: remainingInteractions
     }
 
-let private genInteractionListContaining containingInteraction afterFilter =
+let genInteractionListContaining containingInteraction afterFilter =
     gen {
         let genNonTrivialList =
             gen {
