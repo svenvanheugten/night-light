@@ -7,8 +7,8 @@ open FsToolkit.ErrorHandling
 open FSharp.Data
 
 type HumanInteraction =
-    | LightTurnedOn of Light
-    | LightTurnedOff of Light
+    | LightPoweredOn of Light
+    | LightPoweredOff of Light
 
 type Interaction =
     | HumanInteraction of HumanInteraction
@@ -30,9 +30,9 @@ type FakeLight(light: Light) =
 
     member _.LightWithState = light, if hasPower then On(brightness, color) else Off
 
-    member _.TurnOn() = hasPower <- true
+    member _.PowerOn() = hasPower <- true
 
-    member _.TurnOff() = hasPower <- false
+    member _.PowerOff() = hasPower <- false
 
     member _.SetBrightness(newBrightness: byte) =
         if hasPower then
@@ -91,8 +91,8 @@ type FakeHome() =
 
     member _.Interact(interaction: Interaction) =
         match interaction with
-        | HumanInteraction(LightTurnedOn light) ->
-            friendlyNameToFakeLight[light.FriendlyName].TurnOn()
+        | HumanInteraction(LightPoweredOn light) ->
+            friendlyNameToFakeLight[light.FriendlyName].PowerOn()
 
             { Topic = "zigbee2mqtt/bridge/event"
               Payload =
@@ -102,7 +102,7 @@ type FakeHome() =
                   }}" }
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
-        | HumanInteraction(LightTurnedOff light) -> friendlyNameToFakeLight[light.FriendlyName].TurnOff()
+        | HumanInteraction(LightPoweredOff light) -> friendlyNameToFakeLight[light.FriendlyName].PowerOff()
         | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger
 
 type FakeHome with

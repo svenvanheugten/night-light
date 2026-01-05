@@ -10,7 +10,7 @@ let private genTimeChangedInteraction =
 let private genHumanInteraction =
     Gen.elements lights
     |> Gen.bind (fun light ->
-        [ LightTurnedOn light; LightTurnedOff light ]
+        [ LightPoweredOn light; LightPoweredOff light ]
         |> Gen.elements
         |> Gen.map Interaction.HumanInteraction)
 
