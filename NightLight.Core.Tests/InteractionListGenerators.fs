@@ -44,6 +44,3 @@ let genInteractionListContaining containingInteraction afterFilter =
                 Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
             | _ -> genNonTrivialList
     }
-
-let genInteractionListThatEndsAtTime time =
-    genInteractionListContaining (Interaction.TimeChanged time) (not << _.IsTimeChanged)

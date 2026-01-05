@@ -1,9 +1,8 @@
 namespace NightLight.Core.Tests
 
 open NightLight.Core.Core
-open NightLight.Core.Tests.ArbitraryInteractionLists
+open NightLight.Core.Tests.TimeChangedGenerators
 open NightLight.Core.Tests.InteractionListGenerators
-open FsCheck
 open FsCheck.Xunit
 open FsCheck.FSharp
 
@@ -24,15 +23,25 @@ type NightLightTests() =
 
         fakeHome
 
-    [<Property(Arbitrary = [| typeof<ArbitraryInteractionListThatEndsDuringTheDay> |])>]
-    let ``All lights that are on should be white or yellow during the day`` (interactions: Interaction list) =
-        let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-        fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = White || color = Yellow)
+    [<Property>]
+    let ``All lights that are on should be white or yellow during the day`` () =
+        genTimeChangedToDay
+        |> Gen.bind (fun timeChangedToDay -> genInteractionListContaining timeChangedToDay (not << _.IsTimeChanged))
+        |> Arb.fromGen
+        |> Prop.forAll
+        <| fun interactions ->
+            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = White || color = Yellow)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryInteractionListThatEndsDuringTheNight> |])>]
-    let ``All lights that are on should be red during the night`` (interactions: Interaction list) =
-        let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-        fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
+    [<Property>]
+    let ``All lights that are on should be red during the night`` () =
+        genTimeChangedToNight
+        |> Gen.bind (fun timeChangedToNight -> genInteractionListContaining timeChangedToNight (not << _.IsTimeChanged))
+        |> Arb.fromGen
+        |> Prop.forAll
+        <| fun interactions ->
+            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            fakeHome.ForAllLightsThatAreOn(fun (_, _, color) -> color = Red)
 
     [<Property>]
     let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed again``
