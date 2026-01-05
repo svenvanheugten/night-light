@@ -16,8 +16,8 @@ let internal generateZigbeeCommandsToFixLight state partOfDay light =
         getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
 
     seq {
-        generateZigbeeCommand color brightness light
         generateStateCommand state light
+        generateZigbeeCommand color brightness light
     }
 
 type NightLightStateMachine private (maybeTime: DateTime option, lightToState: Map<Light, State>) =
