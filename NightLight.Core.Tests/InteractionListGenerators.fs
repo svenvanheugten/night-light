@@ -28,12 +28,12 @@ let private genInteractionsListThatStartsWithTimeChanged =
         return firstInteraction :: remainingInteractions
     }
 
-let genInteractionListContaining containingInteraction afterFilter =
+let genInteractionListContaining containingInteraction disqualifiedAfter =
     gen {
         let genNonTrivialList =
             gen {
                 let! before = genInteractionsListThatStartsWithTimeChanged
-                let! after = Gen.listOf (genInteraction |> Gen.filter afterFilter)
+                let! after = Gen.listOf (genInteraction |> Gen.filter (not << disqualifiedAfter))
                 return before @ containingInteraction :: after
             }
 

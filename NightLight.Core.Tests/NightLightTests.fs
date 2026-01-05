@@ -26,7 +26,7 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be white or yellow during the day`` () =
         genTimeChangedToDay
-        |> Gen.bind (fun timeChangedToDay -> genInteractionListContaining timeChangedToDay (not << _.IsTimeChanged))
+        |> Gen.bind (fun timeChangedToDay -> genInteractionListContaining timeChangedToDay _.IsTimeChanged)
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -36,7 +36,7 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be red during the night`` () =
         genTimeChangedToNight
-        |> Gen.bind (fun timeChangedToNight -> genInteractionListContaining timeChangedToNight (not << _.IsTimeChanged))
+        |> Gen.bind (fun timeChangedToNight -> genInteractionListContaining timeChangedToNight _.IsTimeChanged)
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -49,7 +49,7 @@ type NightLightTests() =
         =
         genInteractionListContaining
             (HumanInteraction RemotePressedOffButton)
-            ((<>) (HumanInteraction RemotePressedOnButton))
+            ((=) (HumanInteraction RemotePressedOnButton))
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
