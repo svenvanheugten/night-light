@@ -30,24 +30,31 @@ type Bulb =
     | IkeaBulb
     | PaulmannBulb
 
+type DeviceFriendlyName =
+    | DeviceFriendlyName of string
+
+    member this.Get =
+        match this with
+        | DeviceFriendlyName deviceFriendlyName -> deviceFriendlyName
+
 type Light =
-    { FriendlyName: string
+    { FriendlyName: DeviceFriendlyName
       Room: Room
       Bulb: Bulb }
 
 let lights =
-    [ { FriendlyName = "Vardagsrum - Fönsterlampa"
+    [ { FriendlyName = DeviceFriendlyName "Vardagsrum - Fönsterlampa"
         Room = LivingRoom
         Bulb = IkeaBulb }
-      { FriendlyName = "Vardagsrum - Vägglampa"
+      { FriendlyName = DeviceFriendlyName "Vardagsrum - Vägglampa"
         Room = LivingRoom
         Bulb = PaulmannBulb }
-      { FriendlyName = "Vardagsrum - Golvlampa"
+      { FriendlyName = DeviceFriendlyName "Vardagsrum - Golvlampa"
         Room = LivingRoom
         Bulb = PaulmannBulb }
-      { FriendlyName = "Badrum - Taklampa"
+      { FriendlyName = DeviceFriendlyName "Badrum - Taklampa"
         Room = Bathroom
         Bulb = IkeaBulb }
-      { FriendlyName = "Sovrum - Nattduksbordlampa"
+      { FriendlyName = DeviceFriendlyName "Sovrum - Nattduksbordlampa"
         Room = Bedroom
         Bulb = IkeaBulb } ]

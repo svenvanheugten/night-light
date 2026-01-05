@@ -4,7 +4,7 @@ open NightLight.Core.Models
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
-type ZigbeeEvent = DeviceAnnounce of FriendlyName: string
+type ZigbeeEvent = DeviceAnnounce of DeviceFriendlyName
 
 let parseZigbeeEvent (message: Message) =
     result {
@@ -17,7 +17,7 @@ let parseZigbeeEvent (message: Message) =
             match messageType with
             | JsonValue.String "device_announce" ->
                 match messageData.TryGetProperty "friendly_name" with
-                | Some(JsonValue.String friendlyName) -> Ok(DeviceAnnounce friendlyName)
+                | Some(JsonValue.String friendlyName) -> Ok <| DeviceAnnounce(DeviceFriendlyName friendlyName)
                 | Some _ -> Error InvalidFriendlyNameField
                 | None -> Error MissingFriendlyNameField
             | JsonValue.String _ -> Error UnknownType

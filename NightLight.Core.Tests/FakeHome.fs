@@ -59,7 +59,11 @@ type FakeHome() =
         option {
             let! friendlyName =
                 let m = Regex.Match(command.Topic, "^zigbee2mqtt/(.+)/set$")
-                if m.Success then Some m.Groups.[1].Value else None
+
+                if m.Success then
+                    Some(DeviceFriendlyName m.Groups.[1].Value)
+                else
+                    None
 
             let! fakeLight = Map.tryFind friendlyName friendlyNameToFakeLight
 
@@ -94,7 +98,7 @@ type FakeHome() =
               Payload =
                 $@"{{
                     ""type"": ""device_announce"",
-                    ""data"": {{ ""friendly_name"": ""{light.FriendlyName}"" }}
+                    ""data"": {{ ""friendly_name"": ""{light.FriendlyName.Get}"" }}
                   }}" }
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
