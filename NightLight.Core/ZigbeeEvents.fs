@@ -37,5 +37,5 @@ let parseZigbeeEvent (message: Message) =
                 | Some(JsonValue.String "off") -> Ok(ButtonPress PressedOff)
                 | Some _ -> Error InvalidActionField
                 | None -> Error MissingActionField
-        | _ -> return! Error UnknownTopic
+        | _ -> return! Error <| UnknownTopic message.Topic
     }

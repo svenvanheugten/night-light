@@ -9,7 +9,7 @@ type Event =
     | TimeChanged of DateTime
 
 type ParseZigbeeEventError =
-    | UnknownTopic
+    | UnknownTopic of string
     | InvalidJson
     | MissingTypeField
     | MissingDataField
