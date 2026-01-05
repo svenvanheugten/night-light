@@ -4,7 +4,7 @@ open System.Text.Json.Nodes
 open NightLight.Core.Models
 open NightLight.Core.Moods
 
-let generateZigbeeCommand friendlyName targetColor targetBrightness =
+let generateZigbeeCommand (friendlyName: DeviceFriendlyName) targetColor targetBrightness =
     let commandObj = JsonObject()
 
     match targetColor with
@@ -19,7 +19,7 @@ let generateZigbeeCommand friendlyName targetColor targetBrightness =
         match targetBrightness with
         | Brightness b -> b
 
-    let topic = $"zigbee2mqtt/{friendlyName}/set"
+    let topic = $"zigbee2mqtt/{friendlyName.Get}/set"
     let payload = commandObj.ToJsonString()
 
     { Topic = topic; Payload = payload }
