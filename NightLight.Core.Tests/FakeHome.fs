@@ -46,6 +46,9 @@ type FakeLight(light: Light) =
         if hasPower then
             brightness <- newBrightness
 
+            if light.Bulb = IkeaBulb then
+                state <- true
+
     member _.SetColor(newColor: Color) =
         if hasPower then
             color <- newColor

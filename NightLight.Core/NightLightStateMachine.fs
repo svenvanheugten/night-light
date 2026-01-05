@@ -12,12 +12,14 @@ let internal tryFindLight friendlyName =
     Seq.tryFind (fun light -> light.FriendlyName = friendlyName) lights
 
 let internal generateZigbeeCommandsToFixLight state partOfDay light =
-    let color, brightness =
-        getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
-
     seq {
-        generateStateCommand state light
-        generateZigbeeCommand color brightness light
+        yield generateStateCommand state light
+
+        if state = On then
+            let color, brightness =
+                getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
+
+            yield generateZigbeeCommand color brightness light
     }
 
 type NightLightStateMachine private (maybeTime: DateTime option, lightToState: Map<Light, State>) =
@@ -53,7 +55,8 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
                             |> Seq.fold (fun acc key -> Map.add key desiredLightState acc) lightToState
 
                         NightLightStateMachine(maybeTime, newLightToState),
-                        remoteControlledLights |> Seq.map (generateStateCommand desiredLightState)
+                        remoteControlledLights
+                        |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight desiredLightState partOfDay light)
             | TimeChanged newTime, maybePartOfDay ->
                 let newState = NightLightStateMachine(Some newTime, lightToState)
                 let newPartOfDay = getPartOfDay newTime
