@@ -1,11 +1,9 @@
 module NightLight.Core.Tests.InteractionListGenerators
 
-open System
 open FsCheck.FSharp
 open NightLight.Core.Models
-
-let private genTimeChangedInteraction =
-    ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
+open NightLight.Core.Tests.GenHelpers
+open NightLight.Core.Tests.TimeChangedGenerators
 
 let private genHumanInteraction =
     let genLightInteraction =
@@ -18,29 +16,22 @@ let private genHumanInteraction =
     Gen.oneof [ genLightInteraction; genRemoteInteraction ]
     |> Gen.map Interaction.HumanInteraction
 
-let private genInteraction =
-    Gen.oneof [ genTimeChangedInteraction; genHumanInteraction ]
+let private genInteraction = Gen.oneof [ genTimeChanged; genHumanInteraction ]
 
 let private genInteractionsListThatStartsWithTimeChanged =
-    gen {
-        let! firstInteraction = genTimeChangedInteraction
-        let! remainingInteractions = Gen.listOf genInteraction
-        return firstInteraction :: remainingInteractions
-    }
+    [ genTimeChanged |> Gen.map List.singleton; Gen.listOf genInteraction ]
+    |> concatGens
 
-let genInteractionListContaining containingInteraction disqualifiedAfter =
-    gen {
-        let genNonTrivialList =
-            gen {
-                let! before = genInteractionsListThatStartsWithTimeChanged
-                let! after = Gen.listOf (genInteraction |> Gen.filter (not << disqualifiedAfter))
-                return before @ containingInteraction :: after
-            }
+let genInteractionListThatStartsWithTimeChangedAndEndsWith (endsWith: Interaction) =
+    let genNonTrivialList =
+        genInteractionsListThatStartsWithTimeChanged
+        |> Gen.map (fun lst -> lst @ [ endsWith ])
 
-        return!
-            match containingInteraction with
-            | Interaction.TimeChanged _ ->
-                let genTrivialList = Gen.constant <| List.singleton containingInteraction
-                Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
-            | _ -> genNonTrivialList
-    }
+    match endsWith with
+    | Interaction.TimeChanged _ ->
+        let genTrivialList = Gen.constant <| List.singleton endsWith
+        Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
+    | _ -> genNonTrivialList
+
+let genInteractionListExcept disqualifier =
+    genInteraction |> Gen.filter (not << disqualifier) |> Gen.listOf

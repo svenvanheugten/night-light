@@ -7,14 +7,18 @@ let private isDay (time: DateTime) =
     time.TimeOfDay >= TimeSpan.FromHours 5.5
     && time.TimeOfDay < TimeSpan.FromHours 20.5
 
-let genTimeChangedToDay =
-    ArbMap.defaults
-    |> ArbMap.generate<DateTime>
-    |> Gen.filter isDay
-    |> Gen.map Interaction.TimeChanged
+let private isTimeChangedMeetingCondition condition interaction =
+    match interaction with
+    | TimeChanged time when condition time -> true
+    | _ -> false
 
-let genTimeChangedToNight =
-    ArbMap.defaults
-    |> ArbMap.generate<DateTime>
-    |> Gen.filter (not << isDay)
-    |> Gen.map Interaction.TimeChanged
+let isTimeChangedToDay = isTimeChangedMeetingCondition isDay
+
+let isTimeChangedToNight = isTimeChangedMeetingCondition (not << isDay)
+
+let genTimeChanged =
+    ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
+
+let genTimeChangedToDay = genTimeChanged |> Gen.filter isTimeChangedToDay
+
+let genTimeChangedToNight = genTimeChanged |> Gen.filter isTimeChangedToNight
