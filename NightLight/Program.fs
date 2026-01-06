@@ -76,7 +76,7 @@ let mainAsync _ =
 
         let mqttClientOptions = MqttClientOptionsBuilder().WithTcpServer(server).Build()
 
-        let stateLock = new SemaphoreSlim(1, 1)
+        do! mqttClient.ConnectAsync mqttClientOptions |> Async.AwaitTask |> Async.Ignore
 
         let! initialState =
             let emptyNightLightStateMachine = NightLightStateMachine()
@@ -84,6 +84,7 @@ let mainAsync _ =
             TimeChanged DateTime.Now
             |> handleEvent mqttClient logger emptyNightLightStateMachine
 
+        let stateLock = new SemaphoreSlim(1, 1)
         let mutable state = initialState
 
         mqttClient.add_ApplicationMessageReceivedAsync (fun e ->
@@ -100,8 +101,6 @@ let mainAsync _ =
             }
             |> Async.StartAsTask
             :> Task)
-
-        do! mqttClient.ConnectAsync mqttClientOptions |> Async.AwaitTask |> Async.Ignore
 
         do!
             [ "zigbee2mqtt/bridge/event"; $"zigbee2mqtt/{remoteControlFriendlyName.Get}" ]
