@@ -40,8 +40,8 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be white or yellow during the day`` () =
         concatGens
-            [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToDay
-              genInteractionListExcept isTimeChangedToNight ]
+            [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToDay
+              genInteractionsExcept isTimeChangedToNight ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -53,8 +53,8 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be red during the night`` () =
         concatGens
-            [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToNight
-              genInteractionListExcept isTimeChangedToDay ]
+            [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToNight
+              genInteractionsExcept isTimeChangedToDay ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -68,8 +68,8 @@ type NightLightTests() =
         ()
         =
         concatGens
-            [ genInteractionListThatStartsWithTimeChangedAndEndsWith (HumanInteraction RemotePressedOnButton)
-              genInteractionListExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
+            [ genInitialInteractionsAndEndWith (HumanInteraction RemotePressedOnButton)
+              genInteractionsExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -86,8 +86,8 @@ type NightLightTests() =
         ()
         =
         concatGens
-            [ genInteractionListThatStartsWithTimeChangedAndEndsWith (HumanInteraction RemotePressedOffButton)
-              genInteractionListExcept (fun interaction ->
+            [ genInitialInteractionsAndEndWith (HumanInteraction RemotePressedOffButton)
+              genInteractionsExcept (fun interaction ->
                   interaction = HumanInteraction RemotePressedOnButton
                   || interaction |> isTimeChangedToDay) ]
         |> Arb.fromGen
@@ -105,13 +105,13 @@ type NightLightTests() =
         =
         let genInitialInteractionsListThatEndsWithTransitionToDay =
             concatGens
-                [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToNight
-                  genInteractionListExcept isTimeChangedToDay
+                [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToNight
+                  genInteractionsExcept isTimeChangedToDay
                   Gen.map List.singleton genTimeChangedToDay ]
 
         concatGens
             [ genInitialInteractionsListThatEndsWithTransitionToDay
-              genInteractionListExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
+              genInteractionsExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->

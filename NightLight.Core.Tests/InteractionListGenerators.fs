@@ -22,7 +22,7 @@ let private genInteractionsListThatStartsWithTimeChanged =
     [ genTimeChanged |> Gen.map List.singleton; Gen.listOf genInteraction ]
     |> concatGens
 
-let genInteractionListThatStartsWithTimeChangedAndEndsWith (endsWith: Interaction) =
+let genInitialInteractionsAndEndWith (endsWith: Interaction) =
     let genNonTrivialList =
         genInteractionsListThatStartsWithTimeChanged
         |> Gen.map (fun lst -> lst @ [ endsWith ])
@@ -33,5 +33,5 @@ let genInteractionListThatStartsWithTimeChangedAndEndsWith (endsWith: Interactio
         Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
     | _ -> genNonTrivialList
 
-let genInteractionListExcept disqualifier =
+let genInteractionsExcept disqualifier =
     genInteraction |> Gen.filter (not << disqualifier) |> Gen.listOf
