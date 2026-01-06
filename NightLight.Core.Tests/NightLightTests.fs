@@ -1,6 +1,7 @@
 namespace NightLight.Core.Tests
 
 open NightLight.Core.Core
+open NightLight.Core.Tests.GenHelpers
 open NightLight.Core.Tests.TimeChangedGenerators
 open NightLight.Core.Tests.InteractionListGenerators
 open FsCheck.Xunit
@@ -38,8 +39,9 @@ type NightLightTests() =
 
     [<Property>]
     let ``All lights that are on should be white or yellow during the day`` () =
-        genTimeChangedToDay
-        |> Gen.bind (fun timeChangedToDay -> genInteractionListContaining timeChangedToDay _.IsTimeChanged)
+        concatGens
+            [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToDay
+              genInteractionListExcept isTimeChangedToNight ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -50,8 +52,9 @@ type NightLightTests() =
 
     [<Property>]
     let ``All lights that are on should be red during the night`` () =
-        genTimeChangedToNight
-        |> Gen.bind (fun timeChangedToNight -> genInteractionListContaining timeChangedToNight _.IsTimeChanged)
+        concatGens
+            [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToNight
+              genInteractionListExcept isTimeChangedToDay ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -61,13 +64,12 @@ type NightLightTests() =
             |> Prop.trivial (fakeHome.LightStates |> Seq.filter (snd >> _.IsOn) |> Seq.isEmpty)
 
     [<Property>]
-    let ``After pressing 'On' on the remote, the remotely controlled lights that have power should be on until they are powered off or 'Off' is pressed``
+    let ``After pressing 'On' on the remote, all lights that have power should be on as long as the 'Off' button isn't pressed``
         ()
         =
-        genInteractionListContaining (HumanInteraction RemotePressedOnButton) (function
-            | HumanInteraction RemotePressedOffButton -> true
-            | HumanInteraction(LightPoweredOff l) when l.ControlledWithRemote -> true
-            | _ -> false)
+        concatGens
+            [ genInteractionListThatStartsWithTimeChangedAndEndsWith (HumanInteraction RemotePressedOnButton)
+              genInteractionListExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -80,12 +82,14 @@ type NightLightTests() =
             |> Prop.trivial (Seq.isEmpty lightsWithPower)
 
     [<Property>]
-    let ``After pressing 'Off' on the remote, the remotely controlled lights should stay off until 'On' is pressed``
+    let ``After pressing 'Off' on the remote, all lights that have power should be on as long as the 'On' button isn't pressed and a new day doesn't start``
         ()
         =
-        genInteractionListContaining
-            (HumanInteraction RemotePressedOffButton)
-            ((=) (HumanInteraction RemotePressedOnButton))
+        concatGens
+            [ genInteractionListThatStartsWithTimeChangedAndEndsWith (HumanInteraction RemotePressedOffButton)
+              genInteractionListExcept (fun interaction ->
+                  interaction = HumanInteraction RemotePressedOnButton
+                  || interaction |> isTimeChangedToDay) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -93,4 +97,24 @@ type NightLightTests() =
             let lightsWithPower = fakeHome.LightStates |> filterToLightsWithPower interactions
 
             fakeHome.ForAllRemotelyControlledLights(fun (_, state) -> state = Off)
+            |> Prop.trivial (Seq.isEmpty lightsWithPower)
+
+    [<Property>]
+    let ``After a new day starts, all lights that have power should be on as long as the 'Off' button isn't pressed``
+        ()
+        =
+        concatGens
+            [ Gen.bind genInteractionListThatStartsWithTimeChangedAndEndsWith genTimeChangedToNight
+              genInteractionListExcept isTimeChangedToDay
+              Gen.map List.singleton genTimeChangedToDay
+              genInteractionListExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
+        |> Arb.fromGen
+        |> Prop.forAll
+        <| fun interactions ->
+            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            let lightsWithPower = fakeHome.LightStates |> filterToLightsWithPower interactions
+
+            lightsWithPower
+            |> Seq.map snd
+            |> Seq.forall _.IsOn
             |> Prop.trivial (Seq.isEmpty lightsWithPower)
