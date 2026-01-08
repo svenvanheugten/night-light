@@ -40,7 +40,7 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be white or yellow during the day`` () =
         concatGens
-            [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToDay
+            [ genInitialInteractionsAndEndWith =<< genTimeChangedToDay
               genInteractionsExcept isTimeChangedToNight ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -53,7 +53,7 @@ type NightLightTests() =
     [<Property>]
     let ``All lights that are on should be red during the night`` () =
         concatGens
-            [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToNight
+            [ genInitialInteractionsAndEndWith =<< genTimeChangedToNight
               genInteractionsExcept isTimeChangedToDay ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -105,9 +105,9 @@ type NightLightTests() =
         =
         let genInitialInteractionsListThatEndsWithTransitionToDay =
             concatGens
-                [ Gen.bind genInitialInteractionsAndEndWith genTimeChangedToNight
+                [ genInitialInteractionsAndEndWith =<< genTimeChangedToNight
                   genInteractionsExcept isTimeChangedToDay
-                  Gen.map List.singleton genTimeChangedToDay ]
+                  genTimeChangedToDay |> Gen.map List.singleton ]
 
         concatGens
             [ genInitialInteractionsListThatEndsWithTransitionToDay
