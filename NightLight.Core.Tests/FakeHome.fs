@@ -135,15 +135,5 @@ type FakeHome() =
 type FakeHome with
     member this.Interact(interactions: Interaction seq) = interactions |> Seq.iter this.Interact
 
-    member this.ForAllLightsThatAreOn condition =
-        this.LightStates
-        |> Seq.choose (fun (light, state) ->
-            match state with
-            | On(brightness, color) -> Some(light, brightness, color)
-            | Off -> None)
-        |> Seq.forall condition
-
-    member this.ForAllRemotelyControlledLights condition =
-        this.LightStates
-        |> Seq.filter (fst >> _.ControlledWithRemote)
-        |> Seq.forall condition
+    member this.LightShouldHaveState light condition =
+        this.LightStates |> Seq.find (fst >> (=) light) |> snd |> condition
