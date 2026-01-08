@@ -64,7 +64,7 @@ type NightLightTests() =
                 | On(_, color) -> color = Red)
 
     [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
-    let ``All non-remotely controlled lights should be on *if and only if* they have power`` (light: Light) =
+    let ``All non-remotely controlled lights should be on iff they have power`` (light: Light) =
         genInitialInteractions light |> Arb.fromGen |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
