@@ -82,7 +82,7 @@ type NightLightTests() =
             |> Prop.trivial (Seq.isEmpty lightsWithPower)
 
     [<Property>]
-    let ``After pressing 'Off' on the remote, all lights that have power should be on as long as the 'On' button isn't pressed and a new day doesn't start``
+    let ``After pressing 'Off' on the remote, all remotely controlled lights should be off as long as the 'On' button isn't pressed and a new day doesn't start``
         ()
         =
         concatGens
