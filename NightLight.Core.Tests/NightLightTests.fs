@@ -26,6 +26,14 @@ type NightLightTests() =
         fakeHome
 
     let doesLightHavePowerAfter light interactions =
+        // `FakeHome` intentionally doesn't expose this information, since there is no
+        // (easy) way for a person in the real world either to distinguish between
+        // a lamp that *physically* does not have power, and a lamp that has simply
+        // been turned off programmatically (but which still has power and can thus
+        // receive new commands).
+        //
+        // They can, however, deduce it by remembering the last time that they flicked
+        // the lamp's switch, just like this function does.
         interactions
         |> Seq.choose (fun interaction ->
             match interaction with
