@@ -38,8 +38,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off, white or yellow during the day`` (light: Light) =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToDay
-              genInteractionsExcept light isTimeChangedToNight ]
+            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomDayTime
+              genInteractionsExcept light isTimeChangedToAnyNightTime ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -52,8 +52,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off or red during the night`` (light: Light) =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToNight
-              genInteractionsExcept light isTimeChangedToDay ]
+            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomNightTime
+              genInteractionsExcept light isTimeChangedToAnyDayTime ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -91,9 +91,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToNight
-              genInteractionsExcept light isTimeChangedToDay
-              genTimeChangedToDay |> Gen.map List.singleton
+            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomNightTime
+              genInteractionsExcept light isTimeChangedToAnyDayTime
+              genTimeChangedToRandomDayTime |> Gen.map List.singleton
               genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -111,7 +111,7 @@ type NightLightTests() =
             [ genInitialInteractionsAndEndWith light (HumanInteraction RemotePressedOffButton)
               genInteractionsExcept light (fun interaction ->
                   interaction = HumanInteraction RemotePressedOnButton
-                  || interaction |> isTimeChangedToDay) ]
+                  || interaction |> isTimeChangedToAnyDayTime) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->

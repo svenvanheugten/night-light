@@ -12,13 +12,15 @@ let private isTimeChangedMeetingCondition condition interaction =
     | TimeChanged time when condition time -> true
     | _ -> false
 
-let isTimeChangedToDay = isTimeChangedMeetingCondition isDay
+let isTimeChangedToAnyDayTime = isTimeChangedMeetingCondition isDay
 
-let isTimeChangedToNight = isTimeChangedMeetingCondition (not << isDay)
+let isTimeChangedToAnyNightTime = isTimeChangedMeetingCondition (not << isDay)
 
 let genTimeChanged =
     ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
 
-let genTimeChangedToDay = genTimeChanged |> Gen.filter isTimeChangedToDay
+let genTimeChangedToRandomDayTime =
+    genTimeChanged |> Gen.filter isTimeChangedToAnyDayTime
 
-let genTimeChangedToNight = genTimeChanged |> Gen.filter isTimeChangedToNight
+let genTimeChangedToRandomNightTime =
+    genTimeChanged |> Gen.filter isTimeChangedToAnyNightTime
