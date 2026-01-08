@@ -103,14 +103,10 @@ type NightLightTests() =
     let ``After a new day starts, all lights that have power should be on as long as the 'Off' button isn't pressed``
         ()
         =
-        let genInitialInteractionsListThatEndsWithTransitionToDay =
-            concatGens
-                [ genInitialInteractionsAndEndWith =<< genTimeChangedToNight
-                  genInteractionsExcept isTimeChangedToDay
-                  genTimeChangedToDay |> Gen.map List.singleton ]
-
         concatGens
-            [ genInitialInteractionsListThatEndsWithTransitionToDay
+            [ genInitialInteractionsAndEndWith =<< genTimeChangedToNight
+              genInteractionsExcept isTimeChangedToDay
+              genTimeChangedToDay |> Gen.map List.singleton
               genInteractionsExcept ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
