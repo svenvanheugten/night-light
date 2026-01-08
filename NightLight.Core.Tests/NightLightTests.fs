@@ -72,7 +72,7 @@ type NightLightTests() =
             doesLightHavePowerAfter light interactions = fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After pressing 'On' on the remote, all remotely controlled lights with power should be on, as long as the 'Off' button isn't pressed``
+    let ``After pressing 'On' on the remote, if the 'Off' button isn't pressed, all remotely controlled lights with power should be on``
         (light: Light)
         =
         concatGens
@@ -87,7 +87,7 @@ type NightLightTests() =
             ==> fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After a new day starts, all remotely controlled lights with power should be on, as long as the 'Off' button isn't pressed``
+    let ``After a new day starts, if the 'Off' button isn't pressed, all remotely controlled lights with power should be on``
         (light: Light)
         =
         concatGens
@@ -104,7 +104,7 @@ type NightLightTests() =
             ==> fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After pressing 'Off' on the remote, all remotely controlled lights should be off as long as the 'On' button isn't pressed and a new day doesn't start``
+    let ``After pressing 'Off' on the remote, if the 'On' button isn't pressed and a new day doesn't start, all remotely controlled lights should be off``
         (light: Light)
         =
         concatGens
