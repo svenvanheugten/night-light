@@ -24,18 +24,12 @@ let genInitialInteractions biasTowardsLight =
       Gen.listOf <| genInteraction biasTowardsLight ]
     |> concatGens
 
-let genInitialInteractionsAndEndWith biasTowardsLight (endsWith: Interaction) =
-    let genNonTrivialList =
-        genInitialInteractions biasTowardsLight
-        |> Gen.map (fun lst -> lst @ [ endsWith ])
-
-    match endsWith with
-    | Interaction.TimeChanged _ ->
-        let genTrivialList = Gen.constant <| List.singleton endsWith
-        Gen.frequency [ 1, genTrivialList; 9, genNonTrivialList ]
-    | _ -> genNonTrivialList
-
 let genInteractionsExcept biasTowardsLight disqualifier =
     genInteraction biasTowardsLight
     |> Gen.filter (not << disqualifier)
     |> Gen.listOf
+
+let genInitialInteractionsExcept biasTowardsLight disqualifier =
+    [ genTimeChanged |> Gen.map List.singleton
+      genInteractionsExcept biasTowardsLight disqualifier ]
+    |> concatGens

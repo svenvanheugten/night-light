@@ -38,7 +38,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off, white or yellow during the day`` (light: Light) =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomDayTime
+            [ genInitialInteractions light
+              genTimeChangedToRandomDayTime |> Gen.map List.singleton
               genInteractionsExcept light isTimeChangedToAnyNightTime ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -52,7 +53,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off or red during the night`` (light: Light) =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomNightTime
+            [ genInitialInteractions light
+              genTimeChangedToRandomNightTime |> Gen.map List.singleton
               genInteractionsExcept light isTimeChangedToAnyDayTime ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -75,9 +77,7 @@ type NightLightTests() =
     let ``All remote controlled lights with power should be on if the 'Off' button on the remote was never pressed``
         (light: Light)
         =
-        concatGens
-            [ genTimeChanged |> Gen.map List.singleton
-              genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
+        genInitialInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton))
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -91,7 +91,8 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInitialInteractionsAndEndWith light (HumanInteraction RemotePressedOnButton)
+            [ genInitialInteractions light
+              HumanInteraction RemotePressedOnButton |> List.singleton |> Gen.constant
               genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
@@ -106,7 +107,8 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInitialInteractionsAndEndWith light =<< genTimeChangedToRandomNightTime
+            [ genInitialInteractions light
+              genTimeChangedToRandomNightTime |> Gen.map List.singleton
               genInteractionsExcept light isTimeChangedToAnyDayTime
               genTimeChangedToRandomDayTime |> Gen.map List.singleton
               genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
@@ -123,7 +125,8 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInitialInteractionsAndEndWith light (HumanInteraction RemotePressedOffButton)
+            [ genInitialInteractions light
+              HumanInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
               genInteractionsExcept light (fun interaction ->
                   interaction = HumanInteraction RemotePressedOnButton
                   || interaction |> isTimeChangedToAnyDayTime) ]
