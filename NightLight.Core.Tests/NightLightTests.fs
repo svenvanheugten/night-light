@@ -63,8 +63,16 @@ type NightLightTests() =
                 | Off -> true
                 | On(_, color) -> color = Red)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
-    let ``After pressing 'On' on the remote, all lights with power should be on, as long as the 'Off' button isn't pressed``
+    [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
+    let ``All non-remotely controlled lights should be on *if and only if* they have power`` (light: Light) =
+        genInitialInteractions light |> Arb.fromGen |> Prop.forAll
+        <| fun interactions ->
+            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+
+            doesLightHavePowerAfter light interactions = fakeHome.LightShouldHaveState light _.IsOn
+
+    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
+    let ``After pressing 'On' on the remote, all remotely controlled lights with power should be on, as long as the 'Off' button isn't pressed``
         (light: Light)
         =
         concatGens
@@ -78,8 +86,8 @@ type NightLightTests() =
             doesLightHavePowerAfter light interactions
             ==> fakeHome.LightShouldHaveState light _.IsOn
 
-    [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
-    let ``After a new day starts, all lights with power should be on, as long as the 'Off' button isn't pressed``
+    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
+    let ``After a new day starts, all remotely controlled lights with power should be on, as long as the 'Off' button isn't pressed``
         (light: Light)
         =
         concatGens

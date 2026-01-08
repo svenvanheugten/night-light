@@ -19,14 +19,14 @@ let private genHumanInteraction biasTowardsLight =
 let private genInteraction biasTowardsLight =
     Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight ]
 
-let private genInteractionsListThatStartsWithTimeChanged biasTowardsLight =
+let genInitialInteractions biasTowardsLight =
     [ genTimeChanged |> Gen.map List.singleton
       Gen.listOf <| genInteraction biasTowardsLight ]
     |> concatGens
 
 let genInitialInteractionsAndEndWith biasTowardsLight (endsWith: Interaction) =
     let genNonTrivialList =
-        genInteractionsListThatStartsWithTimeChanged biasTowardsLight
+        genInitialInteractions biasTowardsLight
         |> Gen.map (fun lst -> lst @ [ endsWith ])
 
     match endsWith with
