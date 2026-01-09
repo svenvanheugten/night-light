@@ -33,3 +33,21 @@ let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
         match interactions with
         | Interaction.TimeChanged _ :: _ -> Gen.constant interactions
         | _ -> genTimeChanged |> Gen.map (fun tc -> tc :: interactions))
+
+let ensureLightHasPower (light: Light) (genInteractions: Gen<Interaction list>) =
+    genInteractions
+    |> Gen.map (fun interactions ->
+        let lightHasPower =
+            interactions
+            |> Seq.choose (fun interaction ->
+                match interaction with
+                | HumanInteraction(LightPoweredOff l) when l = light -> Some false
+                | HumanInteraction(LightPoweredOn l) when l = light -> Some true
+                | _ -> None)
+            |> Seq.tryLast
+            |> Option.defaultValue false
+
+        if lightHasPower then
+            interactions
+        else
+            interactions @ [ HumanInteraction(LightPoweredOn light) ])
