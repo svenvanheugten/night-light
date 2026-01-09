@@ -2,8 +2,8 @@ module NightLight.Core.Tests.InteractionListGenerators
 
 open FsCheck.FSharp
 open NightLight.Core.Models
-open NightLight.Core.Tests.GenHelpers
 open NightLight.Core.Tests.TimeChangedGenerators
+open FsCheck
 
 let private genHumanInteraction biasTowardsLight =
     let genLightInteraction =
@@ -19,17 +19,17 @@ let private genHumanInteraction biasTowardsLight =
 let private genInteraction biasTowardsLight =
     Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight ]
 
-let genInitialInteractions biasTowardsLight =
-    [ genTimeChanged |> Gen.map List.singleton
-      Gen.listOf <| genInteraction biasTowardsLight ]
-    |> concatGens
-
 let genRandomInteractionsExcept biasTowardsLight disqualifier =
     genInteraction biasTowardsLight
     |> Gen.filter (not << disqualifier)
     |> Gen.listOf
 
-let genInitialInteractionsExcept biasTowardsLight disqualifier =
-    [ genTimeChanged |> Gen.map List.singleton
-      genRandomInteractionsExcept biasTowardsLight disqualifier ]
-    |> concatGens
+let genRandomInteractions biasTowardsLight =
+    genRandomInteractionsExcept biasTowardsLight (fun _ -> false)
+
+let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
+    genInteractions
+    |> Gen.bind (fun interactions ->
+        match interactions with
+        | Interaction.TimeChanged _ :: _ -> Gen.constant interactions
+        | _ -> genTimeChanged |> Gen.map (fun tc -> tc :: interactions))
