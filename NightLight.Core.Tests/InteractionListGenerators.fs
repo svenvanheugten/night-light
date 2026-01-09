@@ -24,12 +24,12 @@ let genInitialInteractions biasTowardsLight =
       Gen.listOf <| genInteraction biasTowardsLight ]
     |> concatGens
 
-let genInteractionsExcept biasTowardsLight disqualifier =
+let genRandomInteractionsExcept biasTowardsLight disqualifier =
     genInteraction biasTowardsLight
     |> Gen.filter (not << disqualifier)
     |> Gen.listOf
 
 let genInitialInteractionsExcept biasTowardsLight disqualifier =
     [ genTimeChanged |> Gen.map List.singleton
-      genInteractionsExcept biasTowardsLight disqualifier ]
+      genRandomInteractionsExcept biasTowardsLight disqualifier ]
     |> concatGens

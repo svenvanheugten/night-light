@@ -48,7 +48,7 @@ type NightLightTests() =
         concatGens
             [ genInitialInteractions light
               genTimeChangedToRandomDayTime |> Gen.map List.singleton
-              genInteractionsExcept light isTimeChangedToAnyNightTime ]
+              genRandomInteractionsExcept light isTimeChangedToAnyNightTime ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -63,7 +63,7 @@ type NightLightTests() =
         concatGens
             [ genInitialInteractions light
               genTimeChangedToRandomNightTime |> Gen.map List.singleton
-              genInteractionsExcept light isTimeChangedToAnyDayTime ]
+              genRandomInteractionsExcept light isTimeChangedToAnyDayTime ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -101,7 +101,7 @@ type NightLightTests() =
         concatGens
             [ genInitialInteractions light
               HumanInteraction RemotePressedOnButton |> List.singleton |> Gen.constant
-              genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
+              genRandomInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -117,9 +117,9 @@ type NightLightTests() =
         concatGens
             [ genInitialInteractions light
               genTimeChangedToRandomNightTime |> Gen.map List.singleton
-              genInteractionsExcept light isTimeChangedToAnyDayTime
+              genRandomInteractionsExcept light isTimeChangedToAnyDayTime
               genTimeChangedToRandomDayTime |> Gen.map List.singleton
-              genInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
+              genRandomInteractionsExcept light ((=) (HumanInteraction RemotePressedOffButton)) ]
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -135,7 +135,7 @@ type NightLightTests() =
         concatGens
             [ genInitialInteractions light
               HumanInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
-              genInteractionsExcept light (fun interaction ->
+              genRandomInteractionsExcept light (fun interaction ->
                   interaction = HumanInteraction RemotePressedOnButton
                   || interaction |> isTimeChangedToAnyDayTime) ]
         |> Arb.fromGen
