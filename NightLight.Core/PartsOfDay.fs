@@ -9,7 +9,7 @@ type PartOfDay =
 let getPartOfDay (dateTime: DateTime) =
     match dateTime with
     | _ when
-        dateTime.TimeOfDay >= TimeSpan.FromHours 5.5
+        dateTime.TimeOfDay >= TimeSpan.FromHours 6
         && dateTime.TimeOfDay < TimeSpan.FromHours 20.5
         ->
         Day

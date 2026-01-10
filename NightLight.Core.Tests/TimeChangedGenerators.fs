@@ -4,7 +4,7 @@ open System
 open FsCheck.FSharp
 
 let private isDay (time: DateTime) =
-    time.TimeOfDay >= TimeSpan.FromHours 5.5
+    time.TimeOfDay >= TimeSpan.FromHours 6
     && time.TimeOfDay < TimeSpan.FromHours 20.5
 
 let private isTimeChangedMeetingCondition condition interaction =
