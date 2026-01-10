@@ -11,15 +11,19 @@ open FsToolkit.ErrorHandling
 let internal tryFindLight friendlyName =
     Seq.tryFind (fun light -> light.FriendlyName = friendlyName) lights
 
-let internal generateZigbeeCommandsToFixLight state partOfDay light =
+let internal generateZigbeeCommandsToFixLight state partOfDay (light: Light) =
     seq {
-        yield generateStateCommand state light
+        match light.ControlledWithRemote, state with
+        | true, _ -> yield generateStateCommand state light
+        | false, On -> ()
+        | false, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
 
         if state = On then
             let color, brightness =
                 getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
 
-            yield generateZigbeeCommand color brightness light
+            yield generateColorCommand light color
+            yield generateBrightnessCommand light brightness
     }
 
 type NightLightStateMachine private (maybeTime: DateTime option, lightToState: Map<Light, State>) =

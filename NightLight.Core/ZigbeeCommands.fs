@@ -25,10 +25,10 @@ let generateStateCommand state light =
 
     commandObj.ToJsonString() |> toZigbeeCommand light
 
-let generateZigbeeCommand targetColor targetBrightness light =
+let internal generateColorCommand light color =
     let commandObj = JsonObject()
 
-    match targetColor with
+    match color with
     | ColorByCoordinates(x, y) ->
         let colorObj = JsonObject()
         colorObj["x"] <- x
@@ -36,8 +36,13 @@ let generateZigbeeCommand targetColor targetBrightness light =
         commandObj["color"] <- colorObj
     | ColorByTemperature t -> commandObj["color_temp"] <- t
 
+    commandObj.ToJsonString() |> toZigbeeCommand light
+
+let internal generateBrightnessCommand light brightness =
+    let commandObj = JsonObject()
+
     commandObj["brightness"] <-
-        match targetBrightness with
+        match brightness with
         | Brightness b -> b
 
     commandObj.ToJsonString() |> toZigbeeCommand light
