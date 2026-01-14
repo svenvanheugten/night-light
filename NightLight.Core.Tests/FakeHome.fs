@@ -6,14 +6,17 @@ open NightLight.Core.Models
 open FsToolkit.ErrorHandling
 open FSharp.Data
 
-type HumanInteraction =
-    | LightPoweredOn of Light
-    | LightPoweredOff of Light
+type RemoteInteraction =
     | RemotePressedOnButton
     | RemotePressedOffButton
 
+type HumanInteraction =
+    | LightPoweredOn of Light
+    | LightPoweredOff of Light
+
 type Interaction =
     | HumanInteraction of HumanInteraction
+    | RemoteInteraction of RemoteInteraction
     | TimeChanged of DateTime
 
 type Color =
@@ -120,12 +123,12 @@ type FakeHome() =
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
         | HumanInteraction(LightPoweredOff light) -> friendlyNameToFakeLight[light.FriendlyName].PowerOff()
-        | HumanInteraction RemotePressedOnButton ->
+        | RemoteInteraction RemotePressedOnButton ->
             { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
               Payload = @"{ ""action"": ""on"" }" }
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
-        | HumanInteraction RemotePressedOffButton ->
+        | RemoteInteraction RemotePressedOffButton ->
             { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
               Payload = @"{ ""action"": ""off"" }" }
             |> ReceivedZigbeeEvent
