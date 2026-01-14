@@ -27,7 +27,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off, white or yellow during the day`` (light: Light) =
-        genRandomInteractions light
+        genInteractions light
         |> ensurePartOfDayIs Day
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -41,7 +41,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off or red during the night`` (light: Light) =
-        genRandomInteractions light
+        genInteractions light
         |> ensurePartOfDayIs Night
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -55,7 +55,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
     let ``All non-remotely controlled lights with power should be on`` (light: Light) =
-        genRandomInteractions light
+        genInteractions light
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -66,7 +66,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
     let ``All remote controlled lights with power should be on if the remote was never used`` (light: Light) =
-        genRandomInteractionsExcept light _.IsRemoteInteraction
+        genInteractionsExcept light _.IsRemoteInteraction
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -79,7 +79,7 @@ type NightLightTests() =
     let ``After pressing 'On' on the remote, if the remote isn't used again, all remotely controlled lights with power should be on``
         (light: Light)
         =
-        genRandomInteractions light
+        genInteractions light
         |> ensureLastRemoteInteractionIs RemotePressedOnButton
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
@@ -94,9 +94,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genRandomInteractions light |> ensurePartOfDayIs Night
+            [ genInteractions light |> ensurePartOfDayIs Night
               genTimeChangedToPartOfDay Day |> Gen.map List.singleton
-              genRandomInteractionsExcept light _.IsRemoteInteraction ]
+              genInteractionsExcept light _.IsRemoteInteraction ]
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
         |> Arb.fromGen
@@ -110,9 +110,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genRandomInteractions light
+            [ genInteractions light
               RemoteInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
-              genRandomInteractionsExcept light (fun interaction ->
+              genInteractionsExcept light (fun interaction ->
                   interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -125,7 +125,7 @@ type NightLightTests() =
     let ``After pressing 'Left' on the remote, if the remote isn't used again, all left-side remotely controlled lights with power should be on``
         (light: Light)
         =
-        genRandomInteractions light
+        genInteractions light
         |> ensureLastRemoteInteractionIs RemotePressedLeftButton
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
@@ -140,9 +140,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genRandomInteractions light
+            [ genInteractions light
               RemoteInteraction RemotePressedLeftButton |> List.singleton |> Gen.constant
-              genRandomInteractionsExcept light (fun interaction ->
+              genInteractionsExcept light (fun interaction ->
                   interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen

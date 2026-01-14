@@ -17,13 +17,13 @@ let private genRemoteInteraction =
 let private genInteraction biasTowardsLight =
     Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight; genRemoteInteraction ]
 
-let genRandomInteractionsExcept biasTowardsLight disqualifier =
+let genInteractionsExcept biasTowardsLight disqualifier =
     genInteraction biasTowardsLight
     |> Gen.filter (not << disqualifier)
     |> Gen.listOf
 
-let genRandomInteractions biasTowardsLight =
-    genRandomInteractionsExcept biasTowardsLight (fun _ -> false)
+let genInteractions biasTowardsLight =
+    genInteractionsExcept biasTowardsLight (fun _ -> false)
 
 let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
     genInteractions
