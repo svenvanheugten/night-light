@@ -27,10 +27,8 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off, white or yellow during the day`` (light: Light) =
-        concatGens
-            [ genRandomInteractions light
-              genTimeChangedToRandomDayTime |> Gen.map List.singleton
-              genRandomInteractionsExcept light isTimeChangedToAnyNightTime ]
+        genRandomInteractions light
+        |> ensurePartOfDayIs Day
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
@@ -43,10 +41,8 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off or red during the night`` (light: Light) =
-        concatGens
-            [ genRandomInteractions light
-              genTimeChangedToRandomNightTime |> Gen.map List.singleton
-              genRandomInteractionsExcept light isTimeChangedToAnyDayTime ]
+        genRandomInteractions light
+        |> ensurePartOfDayIs Night
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
@@ -60,8 +56,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
     let ``All non-remotely controlled lights with power should be on`` (light: Light) =
         genRandomInteractions light
-        |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
+        |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -71,8 +67,8 @@ type NightLightTests() =
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
     let ``All remote controlled lights with power should be on if the remote was never used`` (light: Light) =
         genRandomInteractionsExcept light _.IsRemoteInteraction
-        |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
+        |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -87,8 +83,8 @@ type NightLightTests() =
             [ genRandomInteractions light
               RemoteInteraction RemotePressedOnButton |> List.singleton |> Gen.constant
               genRandomInteractionsExcept light _.IsRemoteInteraction ]
-        |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
+        |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
         <| fun interactions ->
@@ -100,10 +96,8 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genRandomInteractions light
-              genTimeChangedToRandomNightTime |> Gen.map List.singleton
-              genRandomInteractionsExcept light isTimeChangedToAnyDayTime
-              genTimeChangedToRandomDayTime |> Gen.map List.singleton
+            [ genRandomInteractions light |> ensurePartOfDayIs Night
+              genTimeChangedToPartOfDay Day |> Gen.map List.singleton
               genRandomInteractionsExcept light _.IsRemoteInteraction ]
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
@@ -121,7 +115,7 @@ type NightLightTests() =
             [ genRandomInteractions light
               RemoteInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
               genRandomInteractionsExcept light (fun interaction ->
-                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToAnyDayTime) ]
+                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll
@@ -153,7 +147,7 @@ type NightLightTests() =
             [ genRandomInteractions light
               RemoteInteraction RemotePressedLeftButton |> List.singleton |> Gen.constant
               genRandomInteractionsExcept light (fun interaction ->
-                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToAnyDayTime) ]
+                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
         |> Prop.forAll

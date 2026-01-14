@@ -49,3 +49,21 @@ let ensureLightHasPower (light: Light) (genInteractions: Gen<Interaction list>) 
             interactions
         else
             interactions @ [ HumanInteraction(LightPoweredOn light) ])
+
+let ensurePartOfDayIs (desiredPartOfDay: PartOfDay) (genInteractions: Gen<Interaction list>) =
+    genInteractions
+    |> Gen.bind (fun interactions ->
+        let maybeActualTime =
+            interactions
+            |> Seq.choose (fun interaction ->
+                match interaction with
+                | Interaction.TimeChanged time -> Some time
+                | _ -> None)
+            |> Seq.tryLast
+
+        if maybeActualTime |> Option.map getPartOfDay = Some desiredPartOfDay then
+            Gen.constant interactions
+        else
+            desiredPartOfDay
+            |> genTimeChangedToPartOfDay
+            |> Gen.map (fun tc -> interactions @ [ tc ]))

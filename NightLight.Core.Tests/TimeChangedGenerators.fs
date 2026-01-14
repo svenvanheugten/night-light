@@ -3,24 +3,26 @@ module NightLight.Core.Tests.TimeChangedGenerators
 open System
 open FsCheck.FSharp
 
-let private isDay (time: DateTime) =
-    time.TimeOfDay >= TimeSpan.FromHours 6
-    && time.TimeOfDay < TimeSpan.FromHours 20.5
+type PartOfDay =
+    | Day
+    | Night
 
-let private isTimeChangedMeetingCondition condition interaction =
-    match interaction with
-    | TimeChanged time when condition time -> true
-    | _ -> false
-
-let isTimeChangedToAnyDayTime = isTimeChangedMeetingCondition isDay
-
-let isTimeChangedToAnyNightTime = isTimeChangedMeetingCondition (not << isDay)
+let getPartOfDay (dateTime: DateTime) =
+    match dateTime with
+    | _ when
+        dateTime.TimeOfDay >= TimeSpan.FromHours 6
+        && dateTime.TimeOfDay < TimeSpan.FromHours 20.5
+        ->
+        Day
+    | _ -> Night
 
 let genTimeChanged =
     ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
 
-let genTimeChangedToRandomDayTime =
-    genTimeChanged |> Gen.filter isTimeChangedToAnyDayTime
+let isTimeChangedToPartOfDay partOfDay interaction =
+    match interaction with
+    | TimeChanged time when getPartOfDay time = partOfDay -> true
+    | _ -> false
 
-let genTimeChangedToRandomNightTime =
-    genTimeChanged |> Gen.filter isTimeChangedToAnyNightTime
+let genTimeChangedToPartOfDay (partOfDay: PartOfDay) =
+    genTimeChanged |> Gen.filter (isTimeChangedToPartOfDay partOfDay)
