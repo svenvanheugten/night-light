@@ -9,6 +9,7 @@ open FSharp.Data
 type RemoteInteraction =
     | RemotePressedOnButton
     | RemotePressedOffButton
+    | RemotePressedLeftButton
 
 type HumanInteraction =
     | LightPoweredOn of Light
@@ -131,6 +132,11 @@ type FakeHome() =
         | RemoteInteraction RemotePressedOffButton ->
             { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
               Payload = @"{ ""action"": ""off"" }" }
+            |> ReceivedZigbeeEvent
+            |> onEventPublished.Trigger
+        | RemoteInteraction RemotePressedLeftButton ->
+            { Topic = $"zigbee2mqtt/{remoteControlFriendlyName.Get}"
+              Payload = @"{ ""action"": ""arrow_left_click"" }" }
             |> ReceivedZigbeeEvent
             |> onEventPublished.Trigger
         | TimeChanged newTime -> newTime |> Event.TimeChanged |> onEventPublished.Trigger

@@ -7,6 +7,7 @@ open FSharp.Data
 type Action =
     | PressedOn
     | PressedOff
+    | PressedLeft
 
 type ZigbeeEvent =
     | DeviceAnnounce of DeviceFriendlyName
@@ -35,6 +36,7 @@ let parseZigbeeEvent (message: Message) =
                 match jsonValue.TryGetProperty "action" with
                 | Some(JsonValue.String "on") -> Ok(ButtonPress PressedOn)
                 | Some(JsonValue.String "off") -> Ok(ButtonPress PressedOff)
+                | Some(JsonValue.String "arrow_left_click") -> Ok(ButtonPress PressedLeft)
                 | Some _ -> Error InvalidActionField
                 | None -> Error MissingActionField
         | _ -> return! Error <| UnknownTopic message.Topic

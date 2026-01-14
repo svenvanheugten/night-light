@@ -11,7 +11,7 @@ let private genHumanInteraction biasTowardsLight =
     |> Gen.map Interaction.HumanInteraction
 
 let private genRemoteInteraction =
-    Gen.elements [ RemotePressedOnButton; RemotePressedOffButton ]
+    Gen.elements [ RemotePressedOnButton; RemotePressedOffButton; RemotePressedLeftButton ]
     |> Gen.map RemoteInteraction
 
 let private genInteraction biasTowardsLight =
