@@ -40,32 +40,40 @@ type DeviceFriendlyName =
         match this with
         | DeviceFriendlyName deviceFriendlyName -> deviceFriendlyName
 
+type LightControl =
+    | NonRemote
+    | RemoteLeft
+    | RemoteRight
+
 type Light =
     { FriendlyName: DeviceFriendlyName
       Room: Room
       Bulb: Bulb
-      ControlledWithRemote: bool }
+      ControlledWithRemote: LightControl }
 
 let lights =
     [ { FriendlyName = DeviceFriendlyName "Vardagsrum - Fönsterlampa"
-        Room = LivingRoom
+        Room = Bedroom
         Bulb = IkeaBulb
-        ControlledWithRemote = true }
+        ControlledWithRemote = RemoteRight }
       { FriendlyName = DeviceFriendlyName "Vardagsrum - Vägglampa"
         Room = LivingRoom
         Bulb = PaulmannBulb
-        ControlledWithRemote = false }
+        ControlledWithRemote = NonRemote }
       { FriendlyName = DeviceFriendlyName "Vardagsrum - Golvlampa"
         Room = LivingRoom
         Bulb = PaulmannBulb
-        ControlledWithRemote = false }
+        ControlledWithRemote = NonRemote }
       { FriendlyName = DeviceFriendlyName "Badrum - Taklampa"
         Room = Bathroom
         Bulb = IkeaBulb
-        ControlledWithRemote = false }
+        ControlledWithRemote = NonRemote }
       { FriendlyName = DeviceFriendlyName "Sovrum - Nattduksbordlampa"
         Room = Bedroom
         Bulb = IkeaBulb
-        ControlledWithRemote = true } ]
+        ControlledWithRemote = RemoteLeft } ]
+
+let remoteControlledLights =
+    lights |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
 
 let remoteControlFriendlyName = DeviceFriendlyName "Fjärrkontroll"

@@ -14,9 +14,9 @@ let internal tryFindLight friendlyName =
 let internal generateZigbeeCommandsToFixLight state partOfDay (light: Light) =
     seq {
         match light.ControlledWithRemote, state with
-        | true, _ -> yield generateStateCommand state light
-        | false, On -> ()
-        | false, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
+        | NonRemote, On -> ()
+        | NonRemote, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
+        | _, _ -> yield generateStateCommand state light
 
         if state = On then
             let color, brightness =
@@ -32,7 +32,6 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
             let maybePartOfDay = maybeTime |> Option.map getPartOfDay
-            let remoteControlledLights = lights |> Seq.filter _.ControlledWithRemote
 
             let updateLightStateForRemoteControlledLights desiredLightState =
                 remoteControlledLights
@@ -52,16 +51,21 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
                         | Some light -> generateZigbeeCommandsToFixLight lightToState[light] partOfDay light
                         | None -> Seq.empty
                     | ButtonPress action ->
-                        let desiredLightState =
+                        let newLightToState =
                             match action with
-                            | PressedOn -> On
-                            | PressedOff -> Off
-
-                        let newLightToState = updateLightStateForRemoteControlledLights desiredLightState
+                            | PressedOn -> updateLightStateForRemoteControlledLights On
+                            | PressedOff -> updateLightStateForRemoteControlledLights Off
+                            | PressedLeft ->
+                                updateLightStateForRemoteControlledLights Off
+                                |> Map.add
+                                    (remoteControlledLights
+                                     |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft))
+                                    On
 
                         NightLightStateMachine(maybeTime, newLightToState),
                         remoteControlledLights
-                        |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight desiredLightState partOfDay light)
+                        |> Seq.collect (fun light ->
+                            generateZigbeeCommandsToFixLight newLightToState[light] partOfDay light)
             | TimeChanged newTime, maybePartOfDay ->
                 let newPartOfDay = getPartOfDay newTime
 
