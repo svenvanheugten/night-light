@@ -79,10 +79,8 @@ type NightLightTests() =
     let ``After pressing 'On' on the remote, if the remote isn't used again, all remotely controlled lights with power should be on``
         (light: Light)
         =
-        concatGens
-            [ genRandomInteractions light
-              RemoteInteraction RemotePressedOnButton |> List.singleton |> Gen.constant
-              genRandomInteractionsExcept light _.IsRemoteInteraction ]
+        genRandomInteractions light
+        |> ensureLastRemoteInteractionIs RemotePressedOnButton
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -127,10 +125,8 @@ type NightLightTests() =
     let ``After pressing 'Left' on the remote, if the remote isn't used again, all left-side remotely controlled lights with power should be on``
         (light: Light)
         =
-        concatGens
-            [ genRandomInteractions light
-              RemoteInteraction RemotePressedLeftButton |> List.singleton |> Gen.constant
-              genRandomInteractionsExcept light _.IsRemoteInteraction ]
+        genRandomInteractions light
+        |> ensureLastRemoteInteractionIs RemotePressedLeftButton
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
         |> Arb.fromGen

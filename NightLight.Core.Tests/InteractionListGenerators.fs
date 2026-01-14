@@ -67,3 +67,22 @@ let ensurePartOfDayIs (desiredPartOfDay: PartOfDay) (genInteractions: Gen<Intera
             desiredPartOfDay
             |> genTimeChangedToPartOfDay
             |> Gen.map (fun tc -> interactions @ [ tc ]))
+
+let ensureLastRemoteInteractionIs
+    (desiredLastRemoteInteraction: RemoteInteraction)
+    (genInteractions: Gen<Interaction list>)
+    =
+    genInteractions
+    |> Gen.map (fun interactions ->
+        let maybeLastRemoteInteraction =
+            interactions
+            |> Seq.choose (fun interaction ->
+                match interaction with
+                | Interaction.RemoteInteraction remoteInteraction -> Some remoteInteraction
+                | _ -> None)
+            |> Seq.tryLast
+
+        if maybeLastRemoteInteraction = Some desiredLastRemoteInteraction then
+            interactions
+        else
+            interactions @ [ RemoteInteraction desiredLastRemoteInteraction ])
