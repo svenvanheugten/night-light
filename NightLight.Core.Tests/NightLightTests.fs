@@ -65,7 +65,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``All remote controlled lights with power should be on if the remote was never used`` (light: Light) =
+    let ``If the remote was never used, all remote controlled lights with power should be on`` (light: Light) =
         genInteractionsExcept light _.IsRemoteInteraction
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
@@ -76,7 +76,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After pressing 'On' on the remote, if the remote isn't used again, all remotely controlled lights with power should be on``
+    let ``If the last button that was pressed on the remote is 'On', all remotely controlled lights with power should be on``
         (light: Light)
         =
         genInteractions light
@@ -90,7 +90,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After a new day starts, if the remote isn't used, all remotely controlled lights with power should be on``
+    let ``If a new day has started and the remote hasn't been used yet, all remotely controlled lights with power should be on``
         (light: Light)
         =
         concatGens
@@ -106,7 +106,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``After pressing 'Off' on the remote, if the remote isn't used again and a new day doesn't start, all remotely controlled lights should be off``
+    let ``If the last button that was pressed on the remote is 'Off' and a new day hasn't started yet, all remotely controlled lights should be off``
         (light: Light)
         =
         concatGens
@@ -122,7 +122,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOff
 
     [<Property(Arbitrary = [| typeof<ArbitraryLeftRemotelyControlledLight> |])>]
-    let ``After pressing 'Left' on the remote, if the remote isn't used again, all left-side remotely controlled lights with power should be on``
+    let ``If the last button that was pressed on the remote is 'Left', all left-side remotely controlled lights with power should be on``
         (light: Light)
         =
         genInteractions light
@@ -136,7 +136,7 @@ type NightLightTests() =
             fakeHome.LightShouldHaveState light _.IsOn
 
     [<Property(Arbitrary = [| typeof<ArbitraryRightRemotelyControlledLight> |])>]
-    let ``After pressing 'Left' on the remote, if the remote isn't used again and a new day doesn't start, all right-side remotely controlled lights should be off``
+    let ``If the last button that was pressed on the remote is 'Left' and a new day hasn't started yet, all right-side remotely controlled lights should be off``
         (light: Light)
         =
         concatGens
