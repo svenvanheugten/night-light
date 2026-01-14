@@ -33,9 +33,6 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
         result {
             let maybePartOfDay = maybeTime |> Option.map getPartOfDay
 
-            let remoteControlledLights =
-                lights |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
-
             let updateLightStateForRemoteControlledLights desiredLightState =
                 remoteControlledLights
                 |> Seq.fold (fun acc key -> Map.add key desiredLightState acc) lightToState
@@ -61,7 +58,8 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
                             | PressedLeft ->
                                 updateLightStateForRemoteControlledLights Off
                                 |> Map.add
-                                    (lights |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft))
+                                    (remoteControlledLights
+                                     |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft))
                                     On
 
                         NightLightStateMachine(maybeTime, newLightToState),

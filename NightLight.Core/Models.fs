@@ -73,4 +73,7 @@ let lights =
         Bulb = IkeaBulb
         ControlledWithRemote = RemoteLeft } ]
 
+let remoteControlledLights =
+    lights |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
+
 let remoteControlFriendlyName = DeviceFriendlyName "Fjärrkontroll"
