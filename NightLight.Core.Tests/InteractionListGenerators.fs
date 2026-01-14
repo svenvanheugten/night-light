@@ -15,7 +15,7 @@ let private genRemoteInteraction =
     |> Gen.map RemoteInteraction
 
 let private genInteraction biasTowardsLight =
-    Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight ]
+    Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight; genRemoteInteraction ]
 
 let genRandomInteractionsExcept biasTowardsLight disqualifier =
     genInteraction biasTowardsLight
