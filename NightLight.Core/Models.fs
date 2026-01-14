@@ -53,7 +53,7 @@ type Light =
 
 let lights =
     [ { FriendlyName = DeviceFriendlyName "Vardagsrum - Fönsterlampa"
-        Room = LivingRoom
+        Room = Bedroom
         Bulb = IkeaBulb
         ControlledWithRemote = RemoteRight }
       { FriendlyName = DeviceFriendlyName "Vardagsrum - Vägglampa"
