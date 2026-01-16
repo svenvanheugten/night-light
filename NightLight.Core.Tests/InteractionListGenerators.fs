@@ -42,6 +42,16 @@ let getPartOfDayAfterInteractions interactions =
     |> Seq.last
     |> getPartOfDay
 
+let doesLightHavePowerAfterInteractions light interactions =
+    interactions
+    |> Seq.choose (fun interaction ->
+        match interaction with
+        | HumanInteraction(LightPoweredOff l) when l = light -> Some false
+        | HumanInteraction(LightPoweredOn l) when l = light -> Some true
+        | _ -> None)
+    |> Seq.tryLast
+    |> Option.defaultValue false
+
 let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
     genInteractions
     |> Gen.bind (fun interactions ->
@@ -52,17 +62,7 @@ let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
 let ensureLightHasPower (light: Light) (genInteractions: Gen<Interaction list>) =
     genInteractions
     |> Gen.map (fun interactions ->
-        let lightHasPower =
-            interactions
-            |> Seq.choose (fun interaction ->
-                match interaction with
-                | HumanInteraction(LightPoweredOff l) when l = light -> Some false
-                | HumanInteraction(LightPoweredOn l) when l = light -> Some true
-                | _ -> None)
-            |> Seq.tryLast
-            |> Option.defaultValue false
-
-        if lightHasPower then
+        if doesLightHavePowerAfterInteractions light interactions then
             interactions
         else
             interactions @ [ HumanInteraction(LightPoweredOn light) ])

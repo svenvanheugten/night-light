@@ -44,16 +44,23 @@ type NightLightTests() =
             |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
             |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
 
-    [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
-    let ``All non-remotely controlled lights with power should be on`` (light: Light) =
-        genBiasedInteractions light
-        |> ensureLightHasPower light
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
+    [<Property>]
+    let ``All non-remotely controlled lights that have power should be on`` () =
+        genInteractions |> ensureStartsWithTimeChanged |> Arb.fromGen |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOn
+
+            let nonRemotelyControlledLightsWithPower =
+                fakeHome.LightStates
+                |> Seq.filter (fun (light, _) ->
+                    light.ControlledWithRemote = NonRemote
+                    && doesLightHavePowerAfterInteractions light interactions)
+                |> Seq.toList
+
+            nonRemotelyControlledLightsWithPower
+            |> Seq.forall (snd >> _.IsOn)
+            |> Prop.trivial (nonRemotelyControlledLightsWithPower.Length = 0)
+            |> Prop.collect $"{nonRemotelyControlledLightsWithPower.Length} non-remotely controlled light(s) with power"
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
     let ``If the remote was never used, all remote controlled lights with power should be on`` (light: Light) =
