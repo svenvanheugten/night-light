@@ -5,8 +5,10 @@ open NightLight.Core.Models
 open NightLight.Core.Tests.TimeChangedGenerators
 open FsCheck
 
-let private genHumanInteraction biasTowardsLight =
-    Gen.oneof [ Gen.constant biasTowardsLight; Gen.elements lights ]
+let private genHumanInteraction maybeBiasTowardsLight =
+    match maybeBiasTowardsLight with
+    | Some biasTowardsLight -> Gen.oneof [ Gen.constant biasTowardsLight; Gen.elements lights ]
+    | None -> Gen.elements lights
     |> Gen.bind (fun light -> Gen.elements [ LightPoweredOn light; LightPoweredOff light ])
     |> Gen.map Interaction.HumanInteraction
 
@@ -14,11 +16,15 @@ let private genRemoteInteraction =
     Gen.elements [ RemotePressedOnButton; RemotePressedOffButton; RemotePressedLeftButton ]
     |> Gen.map RemoteInteraction
 
-let private genInteraction biasTowardsLight =
-    Gen.oneof [ genTimeChanged; genHumanInteraction biasTowardsLight; genRemoteInteraction ]
+let private genInteraction maybeBiasTowardsLight =
+    Gen.oneof
+        [ genTimeChanged
+          genHumanInteraction maybeBiasTowardsLight
+          genRemoteInteraction ]
 
 let genBiasedInteractionsExcept biasTowardsLight disqualifier =
-    genInteraction biasTowardsLight
+    Some biasTowardsLight
+    |> genInteraction
     |> Gen.filter (not << disqualifier)
     |> Gen.listOf
 
