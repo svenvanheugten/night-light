@@ -31,6 +31,17 @@ let genBiasedInteractionsExcept biasTowardsLight disqualifier =
 let genBiasedInteractions biasTowardsLight =
     genBiasedInteractionsExcept biasTowardsLight (fun _ -> false)
 
+let genInteractions = genInteraction None |> Gen.listOf
+
+let getPartOfDayAfterInteractions interactions =
+    interactions
+    |> Seq.choose (fun interaction ->
+        match interaction with
+        | Interaction.TimeChanged time -> Some time
+        | _ -> None)
+    |> Seq.last
+    |> getPartOfDay
+
 let ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
     genInteractions
     |> Gen.bind (fun interactions ->

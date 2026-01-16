@@ -25,33 +25,24 @@ type NightLightTests() =
 
         fakeHome
 
-    [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
-    let ``All lights should be either off, white or yellow during the day`` (light: Light) =
-        genBiasedInteractions light
-        |> ensurePartOfDayIs Day
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
+    [<Property>]
+    let ``All lights should either be off or have the right color`` () =
+        genInteractions |> ensureStartsWithTimeChanged |> Arb.fromGen |> Prop.forAll
         <| fun interactions ->
             let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+            let partOfDay = getPartOfDayAfterInteractions interactions
 
-            fakeHome.LightShouldHaveState light (function
-                | Off -> true
-                | On(_, color) -> color = White || color = Yellow)
-
-    [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
-    let ``All lights should be either off or red during the night`` (light: Light) =
-        genBiasedInteractions light
-        |> ensurePartOfDayIs Night
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-
-            fakeHome.LightShouldHaveState light (function
-                | Off -> true
-                | On(_, color) -> color = Red)
+            fakeHome.LightStates
+            |> Seq.forall (function
+                | _, Off -> true
+                | _, On(_, color) ->
+                    match partOfDay with
+                    | Day -> color = White || color = Yellow
+                    | Night -> color = Red)
+            |> Prop.classify (partOfDay = Day) "day"
+            |> Prop.classify (partOfDay = Night) "night"
+            |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
+            |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
 
     [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
     let ``All non-remotely controlled lights with power should be on`` (light: Light) =

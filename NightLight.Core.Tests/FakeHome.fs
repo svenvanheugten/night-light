@@ -144,5 +144,8 @@ type FakeHome() =
 type FakeHome with
     member this.Interact(interactions: Interaction seq) = interactions |> Seq.iter this.Interact
 
+    member this.LightsThatAreOn =
+        this.LightStates |> Seq.filter (snd >> _.IsOn) |> Seq.toList
+
     member this.LightShouldHaveState light condition =
         this.LightStates |> Seq.find (fst >> (=) light) |> snd |> condition
