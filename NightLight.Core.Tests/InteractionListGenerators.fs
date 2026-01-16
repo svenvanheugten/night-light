@@ -95,3 +95,7 @@ let ensureLastRemoteInteractionIs
             interactions
         else
             interactions @ [ RemoteInteraction desiredLastRemoteInteraction ])
+
+type ArbitraryInteractions() =
+    static member Interactions() =
+        genInteractions |> ensureStartsWithTimeChanged |> Arb.fromGen
