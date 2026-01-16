@@ -27,7 +27,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off, white or yellow during the day`` (light: Light) =
-        genInteractions light
+        genBiasedInteractions light
         |> ensurePartOfDayIs Day
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -41,7 +41,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryLight> |])>]
     let ``All lights should be either off or red during the night`` (light: Light) =
-        genInteractions light
+        genBiasedInteractions light
         |> ensurePartOfDayIs Night
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -55,7 +55,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryNonRemotelyControlledLight> |])>]
     let ``All non-remotely controlled lights with power should be on`` (light: Light) =
-        genInteractions light
+        genBiasedInteractions light
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -66,7 +66,7 @@ type NightLightTests() =
 
     [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
     let ``If the remote was never used, all remote controlled lights with power should be on`` (light: Light) =
-        genInteractionsExcept light _.IsRemoteInteraction
+        genBiasedInteractionsExcept light _.IsRemoteInteraction
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -79,7 +79,7 @@ type NightLightTests() =
     let ``If the last button that was pressed on the remote is 'On', all remotely controlled lights with power should be on``
         (light: Light)
         =
-        genInteractions light
+        genBiasedInteractions light
         |> ensureLastRemoteInteractionIs RemotePressedOnButton
         |> ensureLightHasPower light
         |> ensureStartsWithTimeChanged
@@ -94,9 +94,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInteractions light |> ensurePartOfDayIs Night
+            [ genBiasedInteractions light |> ensurePartOfDayIs Night
               genTimeChangedToPartOfDay Day |> Gen.map List.singleton
-              genInteractionsExcept light _.IsRemoteInteraction ]
+              genBiasedInteractionsExcept light _.IsRemoteInteraction ]
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
         |> Arb.fromGen
@@ -110,9 +110,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInteractions light
+            [ genBiasedInteractions light
               RemoteInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
-              genInteractionsExcept light (fun interaction ->
+              genBiasedInteractionsExcept light (fun interaction ->
                   interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
@@ -125,7 +125,7 @@ type NightLightTests() =
     let ``If the last button that was pressed on the remote is 'Left', all left-side remotely controlled lights with power should be on``
         (light: Light)
         =
-        genInteractions light
+        genBiasedInteractions light
         |> ensureLastRemoteInteractionIs RemotePressedLeftButton
         |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
@@ -140,9 +140,9 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genInteractions light
+            [ genBiasedInteractions light
               RemoteInteraction RemotePressedLeftButton |> List.singleton |> Gen.constant
-              genInteractionsExcept light (fun interaction ->
+              genBiasedInteractionsExcept light (fun interaction ->
                   interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
         |> ensureStartsWithTimeChanged
         |> Arb.fromGen
