@@ -85,10 +85,11 @@ type NightLightTests() =
         (light: Light)
         =
         concatGens
-            [ genBiasedInteractions light |> ensurePartOfDayIs Night
+            [ genBiasedInteractions light
+              |> ensureStartsWithTimeChanged
+              |> ensurePartOfDayIs Night
               genTimeChangedToPartOfDay Day |> Gen.map List.singleton
               genBiasedInteractionsExcept light _.IsRemoteInteraction ]
-        |> ensureStartsWithTimeChanged
         |> ensureLightHasPower light
         |> Arb.fromGen
         |> Prop.forAll
