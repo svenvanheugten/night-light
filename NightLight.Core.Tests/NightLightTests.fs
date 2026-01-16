@@ -37,10 +37,9 @@ type NightLightTests() =
                 match partOfDay with
                 | Day -> color = White || color = Yellow
                 | Night -> color = Red)
-        |> Prop.classify (partOfDay = Day) "day"
-        |> Prop.classify (partOfDay = Night) "night"
-        |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
+        |> Prop.collect partOfDay
         |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
+        |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
     let ``All non-remotely controlled lights that have power should be on`` (interactions: Interaction list) =
