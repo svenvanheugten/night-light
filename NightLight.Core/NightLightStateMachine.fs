@@ -26,19 +26,24 @@ let internal generateZigbeeCommandsToFixLight state partOfDay (light: Light) =
             yield generateBrightnessCommand light brightness
     }
 
-type NightLightStateMachine private (maybeTime: DateTime option, lightToState: Map<Light, State>) =
-    new() = NightLightStateMachine(None, lights |> Seq.map (fun light -> light, On) |> Map.ofSeq)
+type internal NightLightState =
+    { Time: DateTime
+      LightToState: Map<Light, State> }
+
+type NightLightStateMachine private (maybeState: NightLightState option) =
+    new() = NightLightStateMachine None
 
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
-            let maybePartOfDay = maybeTime |> Option.map getPartOfDay
-
-            let updateLightStateForRemoteControlledLights desiredLightState =
+            let updateLightStateForRemoteControlledLights oldLightToState desiredLightState =
                 remoteControlledLights
-                |> Seq.fold (fun acc key -> Map.add key desiredLightState acc) lightToState
+                |> Seq.fold (fun acc key -> Map.add key desiredLightState acc) oldLightToState
 
-            match event, maybePartOfDay with
-            | ReceivedZigbeeEvent payload, Some partOfDay ->
+            match event, maybeState with
+            | ReceivedZigbeeEvent payload,
+              Some { Time = time
+                     LightToState = lightToState } ->
+                let partOfDay = time |> getPartOfDay
                 let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
                 return
@@ -53,31 +58,48 @@ type NightLightStateMachine private (maybeTime: DateTime option, lightToState: M
                     | ButtonPress action ->
                         let newLightToState =
                             match action with
-                            | PressedOn -> updateLightStateForRemoteControlledLights On
-                            | PressedOff -> updateLightStateForRemoteControlledLights Off
+                            | PressedOn -> updateLightStateForRemoteControlledLights lightToState On
+                            | PressedOff -> updateLightStateForRemoteControlledLights lightToState Off
                             | PressedLeft ->
-                                updateLightStateForRemoteControlledLights Off
+                                updateLightStateForRemoteControlledLights lightToState Off
                                 |> Map.add
                                     (remoteControlledLights
                                      |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft))
                                     On
 
-                        NightLightStateMachine(maybeTime, newLightToState),
+                        NightLightStateMachine(
+                            Some
+                            <| { Time = time
+                                 LightToState = newLightToState }
+                        ),
                         remoteControlledLights
                         |> Seq.collect (fun light ->
                             generateZigbeeCommandsToFixLight newLightToState[light] partOfDay light)
-            | TimeChanged newTime, maybePartOfDay ->
+            | TimeChanged newTime, maybeState ->
                 let newPartOfDay = getPartOfDay newTime
 
-                let partOfDayChanged = maybePartOfDay <> Some newPartOfDay
+                let partOfDayChanged =
+                    let maybePreviousPartOfDay =
+                        maybeState |> Option.map _.Time |> Option.map getPartOfDay
+
+                    maybePreviousPartOfDay <> Some newPartOfDay
 
                 let newLightToState =
-                    if partOfDayChanged && newPartOfDay = Day then
-                        updateLightStateForRemoteControlledLights On
-                    else
-                        lightToState
+                    maybeState
+                    |> Option.map _.LightToState
+                    |> Option.map (fun lightToState ->
+                        if partOfDayChanged && newPartOfDay = Day then
+                            updateLightStateForRemoteControlledLights lightToState On
+                        else
+                            lightToState)
+                    |> Option.defaultValue (lights |> Seq.map (fun light -> light, On) |> Map.ofSeq)
 
-                let newState = NightLightStateMachine(Some newTime, newLightToState)
+                let newState =
+                    NightLightStateMachine(
+                        Some
+                        <| { Time = newTime
+                             LightToState = newLightToState }
+                    )
 
                 return
                     newState,
