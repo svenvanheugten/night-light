@@ -87,3 +87,8 @@ type internal Brightness = Brightness of int
 type internal Color =
     | ColorByCoordinates of float * float
     | ColorByTemperature of int
+
+type internal LightState =
+    { State: State
+      Brightness: Brightness
+      Color: Color }
