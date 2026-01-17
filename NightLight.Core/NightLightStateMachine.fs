@@ -25,6 +25,7 @@ let internal generateZigbeeCommandsToFixLight state (light: Light) =
 
 type internal NightLightState =
     { Time: DateTime
+      Alarm: bool
       LightToState: Map<Light, LightState> }
 
 let internal withStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
@@ -36,6 +37,10 @@ let internal withStateFor (light: Light) (state: State) (oldNightLightState: Nig
 let internal withStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
     remoteControlledLights
     |> Seq.fold (fun acc light -> acc |> withStateFor light state) oldNightLightState
+
+let internal withAlarmOff (oldNightLightState: NightLightState) =
+    { oldNightLightState with
+        Alarm = false }
 
 let internal generateZigbeeCommandsForDifference (maybeBefore: NightLightState option) (after: NightLightState) =
     after.LightToState
@@ -78,6 +83,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                                 currentState
                                 |> withStateForRemoteControlledLights Off
                                 |> withStateFor lightThatShouldBeOn On
+                            |> withAlarmOff
 
                         NightLightStateMachine(Some newNightLightState),
                         generateZigbeeCommandsForDifference (Some currentState) newNightLightState
@@ -89,6 +95,10 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                         maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
 
                     maybePreviousPartOfDay <> Some Day && newPartOfDay = Day
+
+                let alarm =
+                    maybeCurrentState |> Option.map _.Alarm |> Option.defaultValue false
+                    || newDayStarted
 
                 let newLightToState =
                     lights
@@ -102,7 +112,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                             |> Option.map _.LightToState[light].State
                             |> Option.defaultValue On
 
-                        let newState = if newDayStarted then On else previousState
+                        let newState = if alarm then On else previousState
 
                         light,
                         { Color = color
@@ -112,6 +122,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
 
                 let newNightLightState =
                     { Time = newTime
+                      Alarm = alarm
                       LightToState = newLightToState }
 
                 return
