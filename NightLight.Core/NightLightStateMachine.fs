@@ -27,21 +27,21 @@ type internal NightLightState =
     { Time: DateTime
       LightToState: Map<Light, LightState> }
 
+let internal withStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
+    let oldState = oldNightLightState.LightToState[light]
+
+    { oldNightLightState with
+        LightToState = Map.add light { oldState with State = state } oldNightLightState.LightToState }
+
+let internal withStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
+    remoteControlledLights
+    |> Seq.fold (fun acc light -> acc |> withStateFor light state) oldNightLightState
+
 type NightLightStateMachine private (maybeState: NightLightState option) =
     new() = NightLightStateMachine None
 
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
-            let withUpdatedStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
-                let oldState = oldNightLightState.LightToState[light]
-
-                { oldNightLightState with
-                    LightToState = Map.add light { oldState with State = state } oldNightLightState.LightToState }
-
-            let withUpdatedStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
-                remoteControlledLights
-                |> Seq.fold (fun acc light -> acc |> withUpdatedStateFor light state) oldNightLightState
-
             match event, maybeState with
             | ReceivedZigbeeEvent payload, Some state ->
                 let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
@@ -58,16 +58,16 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                     | ButtonPress action ->
                         let newState =
                             match action with
-                            | PressedOn -> state |> withUpdatedStateForRemoteControlledLights On
-                            | PressedOff -> state |> withUpdatedStateForRemoteControlledLights Off
+                            | PressedOn -> state |> withStateForRemoteControlledLights On
+                            | PressedOff -> state |> withStateForRemoteControlledLights Off
                             | PressedLeft ->
                                 let lightThatShouldBeOn =
                                     remoteControlledLights
                                     |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
 
                                 state
-                                |> withUpdatedStateForRemoteControlledLights Off
-                                |> withUpdatedStateFor lightThatShouldBeOn On
+                                |> withStateForRemoteControlledLights Off
+                                |> withStateFor lightThatShouldBeOn On
 
                         NightLightStateMachine(Some newState),
                         remoteControlledLights
