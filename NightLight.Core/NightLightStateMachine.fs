@@ -11,24 +11,50 @@ open FsToolkit.ErrorHandling
 let internal tryFindLight friendlyName =
     Seq.tryFind (fun light -> light.FriendlyName = friendlyName) lights
 
-type internal NightLightState =
-    { Time: DateTime
-      Alarm: bool
-      LightToState: Map<Light, LightState> }
-
-let internal generateZigbeeCommandsToFixLight (nightLightState: NightLightState) (light: Light) =
+let internal generateZigbeeCommandsToFixLight (light: Light) (desiredLightState: LightState) =
     seq {
-        let desiredLightState = nightLightState.LightToState[light]
-
         match light.ControlledWithRemote, desiredLightState.State with
         | NonRemote, On -> ()
         | NonRemote, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
-        | _, _ -> yield generateStateCommand nightLightState.LightToState[light].State light
+        | _, _ -> yield generateStateCommand desiredLightState.State light
 
         if desiredLightState.State = On then
             yield generateColorCommand light desiredLightState.Color
             yield generateBrightnessCommand light desiredLightState.Brightness
     }
+
+type internal NightLightState =
+    { Time: DateTime
+      Alarm: bool
+      LightToState: Map<Light, LightState> }
+
+let internal createOrUpdateNightLightState
+    (time: DateTime)
+    (alarm: bool)
+    (maybeOldLightToState: Map<Light, LightState> option)
+    =
+    let partOfDay = getPartOfDay time
+
+    let lightToState =
+        lights
+        |> Seq.map (fun light ->
+            let color, brightness =
+                getDesiredMood light.Room partOfDay |> getDesiredColorAndBrightness light.Bulb
+
+            let previousState =
+                maybeOldLightToState
+                |> Option.map (fun lightToState -> lightToState[light].State)
+                |> Option.defaultValue On
+
+            light,
+            { Color = color
+              Brightness = brightness
+              State = if alarm then On else previousState })
+        |> Map.ofSeq
+
+    { Time = time
+      Alarm = alarm
+      LightToState = lightToState }
 
 let internal withStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
     let oldState = oldNightLightState.LightToState[light]
@@ -42,8 +68,7 @@ let internal withStateForRemoteControlledLights (state: State) (oldNightLightSta
     |> Seq.fold (fun acc light -> acc |> withStateFor light state) oldNightLightState
 
 let internal withAlarmOff (oldNightLightState: NightLightState) =
-    { oldNightLightState with
-        Alarm = false }
+    createOrUpdateNightLightState oldNightLightState.Time false (Some oldNightLightState.LightToState)
 
 let internal generateZigbeeCommandsForDifference (maybeBefore: NightLightState option) (after: NightLightState) =
     after.LightToState
@@ -51,7 +76,7 @@ let internal generateZigbeeCommandsForDifference (maybeBefore: NightLightState o
         let oldState = maybeBefore |> Option.map _.LightToState[light]
 
         if oldState <> Some newState then
-            generateZigbeeCommandsToFixLight after light
+            generateZigbeeCommandsToFixLight light after.LightToState[light]
         else
             Seq.empty)
 
@@ -71,7 +96,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
 
                         this,
                         match maybeLight with
-                        | Some light -> generateZigbeeCommandsToFixLight currentState light
+                        | Some light -> generateZigbeeCommandsToFixLight light currentState.LightToState[light]
                         | None -> Seq.empty
                     | ButtonPress action ->
                         let newNightLightState =
@@ -90,42 +115,20 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                         NightLightStateMachine(Some newNightLightState),
                         generateZigbeeCommandsForDifference (Some currentState) newNightLightState
             | TimeChanged newTime, maybeCurrentState ->
-                let newPartOfDay = getPartOfDay newTime
-
-                let newDayStarted =
-                    let maybePreviousPartOfDay =
-                        maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
-
-                    maybePreviousPartOfDay <> Some Day && newPartOfDay = Day
-
                 let alarm =
-                    maybeCurrentState |> Option.map _.Alarm |> Option.defaultValue false
-                    || newDayStarted
+                    let newDayStarted =
+                        let newPartOfDay = getPartOfDay newTime
 
-                let newLightToState =
-                    lights
-                    |> Seq.map (fun light ->
-                        let color, brightness =
-                            getDesiredMood light.Room newPartOfDay
-                            |> getDesiredColorAndBrightness light.Bulb
+                        let maybePreviousPartOfDay =
+                            maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
 
-                        let previousState =
-                            maybeCurrentState
-                            |> Option.map _.LightToState[light].State
-                            |> Option.defaultValue On
+                        maybePreviousPartOfDay <> Some Day && newPartOfDay = Day
 
-                        let newState = if alarm then On else previousState
-
-                        light,
-                        { Color = color
-                          Brightness = brightness
-                          State = newState })
-                    |> Map.ofSeq
+                    newDayStarted
+                    || maybeCurrentState |> Option.map _.Alarm |> Option.defaultValue false
 
                 let newNightLightState =
-                    { Time = newTime
-                      Alarm = alarm
-                      LightToState = newLightToState }
+                    createOrUpdateNightLightState newTime alarm (maybeCurrentState |> Option.map _.LightToState)
 
                 return
                     NightLightStateMachine(Some newNightLightState),
