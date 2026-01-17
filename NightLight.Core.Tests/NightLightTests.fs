@@ -84,7 +84,7 @@ type NightLightTests() =
                 remotelyControlledLightsWithPower |> controlledBy RemoteLeft |> allOn
                 && remotelyControlledLightsWithPower |> controlledBy RemoteRight |> allOff
             | None -> remotelyControlledLightsWithPower |> allOn
-        |> Prop.collect $"last remote interaction is {maybeLastRemoteInteraction}"
+        |> Prop.collect $"last remote interaction is {maybeLastRemoteInteraction |> Option.map snd}"
         |> Prop.collect $"{remotelyControlledLightsWithPower.Length} remotely controlled light(s) with power"
         |> Prop.classify hasNewDayStartedSinceThen "new day has started since then"
         |> Prop.trivial (remotelyControlledLightsWithPower.Length = 0)
