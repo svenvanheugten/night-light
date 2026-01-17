@@ -41,6 +41,23 @@ type NightLightTests() =
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
+    let ``All lights should either be off or have a brightness that fits its color`` (interactions: Interaction list) =
+        let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+
+        fakeHome.LightStates
+        |> Seq.forall (function
+            | _, Off
+            | { Bulb = IkeaBulb }, On(254uy, White) -> true
+            | { Bulb = IkeaBulb }, On(210uy, Yellow) -> true
+            | { Bulb = IkeaBulb }, On(254uy, Red) -> true
+            | { Bulb = PaulmannBulb }, On(35uy, White) -> true
+            | { Bulb = PaulmannBulb }, On(35uy, Yellow) -> true
+            | { Bulb = PaulmannBulb }, On(80uy, Red) -> true
+            | _ -> false)
+        |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
+        |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
+
+    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
     let ``All non-remotely controlled lights with power should be on`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
 
