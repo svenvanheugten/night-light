@@ -59,8 +59,11 @@ let internal createOrUpdateNightLightState
 let internal withStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
     let oldState = oldNightLightState.LightToState[light]
 
-    { oldNightLightState with
-        LightToState = Map.add light { oldState with State = state } oldNightLightState.LightToState }
+    createOrUpdateNightLightState
+        oldNightLightState.Time
+        oldNightLightState.Alarm
+        (Map.add light { oldState with State = state } oldNightLightState.LightToState
+         |> Some)
 
 let internal withStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
     lights
@@ -101,16 +104,16 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                     | ButtonPress action ->
                         let newNightLightState =
                             match action with
-                            | PressedOn -> currentState |> withStateForRemoteControlledLights On
-                            | PressedOff -> currentState |> withStateForRemoteControlledLights Off
+                            | PressedOn -> currentState |> withAlarmOff |> withStateForRemoteControlledLights On
+                            | PressedOff -> currentState |> withAlarmOff |> withStateForRemoteControlledLights Off
                             | PressedLeft ->
                                 let lightThatShouldBeOn =
                                     lights |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
 
                                 currentState
+                                |> withAlarmOff
                                 |> withStateForRemoteControlledLights Off
                                 |> withStateFor lightThatShouldBeOn On
-                            |> withAlarmOff
 
                         NightLightStateMachine(Some newNightLightState),
                         generateZigbeeCommandsForDifference (Some currentState) newNightLightState
