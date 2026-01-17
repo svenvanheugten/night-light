@@ -84,11 +84,11 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
             | TimeChanged newTime, maybeCurrentState ->
                 let newPartOfDay = getPartOfDay newTime
 
-                let partOfDayChanged =
+                let newDayStarted =
                     let maybePreviousPartOfDay =
                         maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
 
-                    maybePreviousPartOfDay <> Some newPartOfDay
+                    maybePreviousPartOfDay <> Some Day && newPartOfDay = Day
 
                 let newLightToState =
                     lights
@@ -102,11 +102,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                             |> Option.map _.LightToState[light].State
                             |> Option.defaultValue On
 
-                        let newState =
-                            if partOfDayChanged && newPartOfDay = Day then
-                                On
-                            else
-                                previousState
+                        let newState = if newDayStarted then On else previousState
 
                         light,
                         { Color = color
