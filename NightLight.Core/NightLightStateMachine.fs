@@ -85,14 +85,19 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                     maybePreviousPartOfDay <> Some newPartOfDay
 
                 let newLightToState =
-                    maybeState
-                    |> Option.map _.LightToState
-                    |> Option.map (fun lightToState ->
-                        if partOfDayChanged && newPartOfDay = Day then
-                            updateLightStateForRemoteControlledLights lightToState On
-                        else
-                            lightToState)
-                    |> Option.defaultValue (lights |> Seq.map (fun light -> light, On) |> Map.ofSeq)
+                    lights
+                    |> Seq.map (fun light ->
+                        let previousState =
+                            maybeState |> Option.map _.LightToState[light] |> Option.defaultValue On
+
+                        let newState =
+                            if partOfDayChanged && newPartOfDay = Day then
+                                On
+                            else
+                                previousState
+
+                        light, newState)
+                    |> Map.ofSeq
 
                 let newState =
                     NightLightStateMachine(
