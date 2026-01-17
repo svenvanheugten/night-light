@@ -9,8 +9,8 @@
     <ItemGroup>
         <Compile Include="FakeHome.fs" />
         <Compile Include="GenHelpers.fs" />
-        <Compile Include="TimeChangedGenerators.fs" />
         <Compile Include="InteractionListGenerators.fs" />
+        <Compile Include="InteractionListHelpers.fs" />
         <Compile Include="LightArbitraries.fs" />
         <Compile Include="NightLightTests.fs" />
     </ItemGroup>

@@ -1,9 +1,8 @@
 namespace NightLight.Core.Tests
 
 open NightLight.Core.Core
-open NightLight.Core.Tests.GenHelpers
-open NightLight.Core.Tests.TimeChangedGenerators
 open NightLight.Core.Tests.InteractionListGenerators
+open NightLight.Core.Tests.InteractionListHelpers
 open NightLight.Core.Models
 open FsCheck.Xunit
 open FsCheck.FSharp
@@ -42,105 +41,50 @@ type NightLightTests() =
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
-    let ``All non-remotely controlled lights that have power should be on`` (interactions: Interaction list) =
+    let ``All non-remotely controlled lights with power should be on`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
 
         let nonRemotelyControlledLightsWithPower =
-            fakeHome.LightStates
-            |> Seq.filter (fun (light, _) ->
-                light.ControlledWithRemote = NonRemote
-                && doesLightHavePowerAfterInteractions light interactions)
+            fakeHome.NonRemotelyControlledLightStates
+            |> Seq.filter (fun (light, _) -> doesLightHavePowerAfterInteractions light interactions)
             |> Seq.toList
 
         nonRemotelyControlledLightsWithPower
         |> Seq.forall (snd >> _.IsOn)
-        |> Prop.trivial (nonRemotelyControlledLightsWithPower.Length = 0)
         |> Prop.collect $"{nonRemotelyControlledLightsWithPower.Length} non-remotely controlled light(s) with power"
+        |> Prop.trivial (nonRemotelyControlledLightsWithPower.Length = 0)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``If the remote was never used, all remote controlled lights with power should be on`` (light: Light) =
-        genBiasedInteractionsExcept light _.IsRemoteInteraction
-        |> ensureLightHasPower light
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOn
+    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
+    let ``All remotely-controlled lights with power should have the correct state`` (interactions: Interaction list) =
+        let fakeHome = createFakeHomeWithNightLightAndInteract interactions
 
-    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``If the last button that was pressed on the remote is 'On', all remotely controlled lights with power should be on``
-        (light: Light)
-        =
-        genBiasedInteractions light
-        |> ensureLastRemoteInteractionIs RemotePressedOnButton
-        |> ensureLightHasPower light
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOn
+        let remotelyControlledLightsWithPower =
+            fakeHome.RemotelyControlledLightStates
+            |> Seq.filter (fun (light, _) -> doesLightHavePowerAfterInteractions light interactions)
+            |> Seq.toList
 
-    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``If a new day has started and the remote hasn't been used yet, all remotely controlled lights with power should be on``
-        (light: Light)
-        =
-        concatGens
-            [ genBiasedInteractions light
-              |> ensureStartsWithTimeChanged
-              |> ensurePartOfDayIs Night
-              genTimeChangedToPartOfDay Day |> Gen.map List.singleton
-              genBiasedInteractionsExcept light _.IsRemoteInteraction ]
-        |> ensureLightHasPower light
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOn
+        let allOn (ls: (Light * LightState) seq) = ls |> Seq.forall (snd >> _.IsOn)
+        let allOff (ls: (Light * LightState) seq) = ls |> Seq.forall (snd >> _.IsOff)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryRemotelyControlledLight> |])>]
-    let ``If the last button that was pressed on the remote is 'Off' and a new day hasn't started yet, all remotely controlled lights should be off``
-        (light: Light)
-        =
-        concatGens
-            [ genBiasedInteractions light
-              RemoteInteraction RemotePressedOffButton |> List.singleton |> Gen.constant
-              genBiasedInteractionsExcept light (fun interaction ->
-                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOff
+        let controlledBy remote ls =
+            ls |> Seq.filter (fst >> _.ControlledWithRemote >> (=) remote)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryLeftRemotelyControlledLight> |])>]
-    let ``If the last button that was pressed on the remote is 'Left', all left-side remotely controlled lights with power should be on``
-        (light: Light)
-        =
-        genBiasedInteractions light
-        |> ensureLastRemoteInteractionIs RemotePressedLeftButton
-        |> ensureStartsWithTimeChanged
-        |> ensureLightHasPower light
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOn
+        let maybeLastRemoteInteraction = tryGetLastRemoteInteraction interactions
 
-    [<Property(Arbitrary = [| typeof<ArbitraryRightRemotelyControlledLight> |])>]
-    let ``If the last button that was pressed on the remote is 'Left' and a new day hasn't started yet, all right-side remotely controlled lights should be off``
-        (light: Light)
-        =
-        concatGens
-            [ genBiasedInteractions light
-              RemoteInteraction RemotePressedLeftButton |> List.singleton |> Gen.constant
-              genBiasedInteractionsExcept light (fun interaction ->
-                  interaction.IsRemoteInteraction || interaction |> isTimeChangedToPartOfDay Day) ]
-        |> ensureStartsWithTimeChanged
-        |> Arb.fromGen
-        |> Prop.forAll
-        <| fun interactions ->
-            let fakeHome = createFakeHomeWithNightLightAndInteract interactions
-            fakeHome.LightShouldHaveState light _.IsOff
+        let hasNewDayStartedSinceThen =
+            hasNewDayStartedSince interactions maybeLastRemoteInteraction
+
+        if hasNewDayStartedSinceThen then
+            remotelyControlledLightsWithPower |> allOn
+        else
+            match maybeLastRemoteInteraction with
+            | Some(_, RemotePressedOnButton) -> remotelyControlledLightsWithPower |> allOn
+            | Some(_, RemotePressedOffButton) -> remotelyControlledLightsWithPower |> allOff
+            | Some(_, RemotePressedLeftButton) ->
+                remotelyControlledLightsWithPower |> controlledBy RemoteLeft |> allOn
+                && remotelyControlledLightsWithPower |> controlledBy RemoteRight |> allOff
+            | None -> remotelyControlledLightsWithPower |> allOn
+        |> Prop.collect $"last remote interaction is {maybeLastRemoteInteraction}"
+        |> Prop.collect $"{remotelyControlledLightsWithPower.Length} remotely controlled light(s) with power"
+        |> Prop.classify hasNewDayStartedSinceThen "new day has started since then"
+        |> Prop.trivial (remotelyControlledLightsWithPower.Length = 0)
