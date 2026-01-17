@@ -104,15 +104,14 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                           State = newState })
                     |> Map.ofSeq
 
-                let newState =
-                    NightLightStateMachine(
-                        Some
-                        <| { Time = newTime
-                             LightToState = newLightToState }
-                    )
+                let newNightLightStateMachine =
+                    { Time = newTime
+                      LightToState = newLightToState }
+                    |> Some
+                    |> NightLightStateMachine
 
                 return
-                    newState,
+                    newNightLightStateMachine,
                     if partOfDayChanged then
                         lights
                         |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight newLightToState[light] light)
