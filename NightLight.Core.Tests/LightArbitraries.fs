@@ -15,18 +15,21 @@ type ArbitraryNonRemotelyControlledLight =
 
 type ArbitraryLeftRemotelyControlledLight =
     static member Light() =
-        remoteControlledLights
+        lights
         |> Seq.filter _.ControlledWithRemote.IsRemoteLeft
         |> Gen.elements
         |> Arb.fromGen
 
 type ArbitraryRightRemotelyControlledLight =
     static member Light() =
-        remoteControlledLights
+        lights
         |> Seq.filter _.ControlledWithRemote.IsRemoteRight
         |> Gen.elements
         |> Arb.fromGen
 
 type ArbitraryRemotelyControlledLight =
     static member Light() =
-        remoteControlledLights |> Gen.elements |> Arb.fromGen
+        lights
+        |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
+        |> Gen.elements
+        |> Arb.fromGen

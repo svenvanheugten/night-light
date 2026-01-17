@@ -37,7 +37,8 @@ let internal withStateFor (light: Light) (state: State) (oldNightLightState: Nig
         LightToState = Map.add light { oldState with State = state } oldNightLightState.LightToState }
 
 let internal withStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
-    remoteControlledLights
+    lights
+    |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
     |> Seq.fold (fun acc light -> acc |> withStateFor light state) oldNightLightState
 
 let internal withAlarmOff (oldNightLightState: NightLightState) =
@@ -79,8 +80,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                             | PressedOff -> currentState |> withStateForRemoteControlledLights Off
                             | PressedLeft ->
                                 let lightThatShouldBeOn =
-                                    remoteControlledLights
-                                    |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
+                                    lights |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
 
                                 currentState
                                 |> withStateForRemoteControlledLights Off
