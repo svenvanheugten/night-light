@@ -32,18 +32,15 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
 
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
-            let updateLightStateForRemoteControlledLights (oldLightToState: Map<Light, LightState>) desiredLightState =
-                remoteControlledLights
-                |> Seq.fold
-                    (fun acc key ->
-                        let oldState = oldLightToState[key]
+            let withUpdatedStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
+                let oldState = oldNightLightState.LightToState[light]
 
-                        Map.add
-                            key
-                            { oldState with
-                                State = desiredLightState }
-                            acc)
-                    oldLightToState
+                { oldNightLightState with
+                    LightToState = Map.add light { oldState with State = state } oldNightLightState.LightToState }
+
+            let withUpdatedStateForRemoteControlledLights (state: State) (oldNightLightState: NightLightState) =
+                remoteControlledLights
+                |> Seq.fold (fun acc light -> acc |> withUpdatedStateFor light state) oldNightLightState
 
             match event, maybeState with
             | ReceivedZigbeeEvent payload, Some state ->
@@ -59,27 +56,23 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                         | Some light -> generateZigbeeCommandsToFixLight state.LightToState[light] light
                         | None -> Seq.empty
                     | ButtonPress action ->
-                        let newLightToState =
+                        let newState =
                             match action with
-                            | PressedOn -> updateLightStateForRemoteControlledLights state.LightToState On
-                            | PressedOff -> updateLightStateForRemoteControlledLights state.LightToState Off
+                            | PressedOn -> state |> withUpdatedStateForRemoteControlledLights On
+                            | PressedOff -> state |> withUpdatedStateForRemoteControlledLights Off
                             | PressedLeft ->
                                 let lightThatShouldBeOn =
                                     remoteControlledLights
                                     |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
 
-                                let oldState = state.LightToState[lightThatShouldBeOn]
+                                state
+                                |> withUpdatedStateForRemoteControlledLights Off
+                                |> withUpdatedStateFor lightThatShouldBeOn On
 
-                                updateLightStateForRemoteControlledLights state.LightToState Off
-                                |> Map.add lightThatShouldBeOn { oldState with State = On }
-
-                        NightLightStateMachine(
-                            Some
-                                { state with
-                                    LightToState = newLightToState }
-                        ),
+                        NightLightStateMachine(Some newState),
                         remoteControlledLights
-                        |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight newLightToState[light] light)
+                        |> Seq.collect (fun light ->
+                            generateZigbeeCommandsToFixLight newState.LightToState[light] light)
             | TimeChanged newTime, maybeState ->
                 let newPartOfDay = getPartOfDay newTime
 
