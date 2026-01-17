@@ -16,11 +16,12 @@ let internal generateZigbeeCommandsToFixLight (light: Light) (desiredLightState:
         match light.ControlledWithRemote, desiredLightState.State with
         | NonRemote, On -> ()
         | NonRemote, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
+        | _, On when light.Bulb = IkeaBulb -> () // Rely on the brightness command for turning it on
         | _, _ -> yield generateStateCommand desiredLightState.State light
 
         if desiredLightState.State = On then
-            yield generateColorCommand light desiredLightState.Color
             yield generateBrightnessCommand light desiredLightState.Brightness
+            yield generateColorCommand light desiredLightState.Color
     }
 
 type internal NightLightState =
