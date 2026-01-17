@@ -37,13 +37,23 @@ let internal withStateForRemoteControlledLights (state: State) (oldNightLightSta
     remoteControlledLights
     |> Seq.fold (fun acc light -> acc |> withStateFor light state) oldNightLightState
 
+let internal generateZigbeeCommandsForDifference (maybeBefore: NightLightState option) (after: NightLightState) =
+    after.LightToState
+    |> Seq.collect (fun (KeyValue(light, newState)) ->
+        let oldState = maybeBefore |> Option.map _.LightToState[light]
+
+        if oldState <> Some newState then
+            generateZigbeeCommandsToFixLight newState light
+        else
+            Seq.empty)
+
 type NightLightStateMachine private (maybeState: NightLightState option) =
     new() = NightLightStateMachine None
 
     member this.OnEventReceived(event: Event) : Result<NightLightStateMachine * Message seq, OnEventReceivedError> =
         result {
             match event, maybeState with
-            | ReceivedZigbeeEvent payload, Some state ->
+            | ReceivedZigbeeEvent payload, Some currentState ->
                 let! zigbeeEvent = parseZigbeeEvent payload |> Result.mapError ParseZigbeeEventError
 
                 return
@@ -53,32 +63,30 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
 
                         this,
                         match maybeLight with
-                        | Some light -> generateZigbeeCommandsToFixLight state.LightToState[light] light
+                        | Some light -> generateZigbeeCommandsToFixLight currentState.LightToState[light] light
                         | None -> Seq.empty
                     | ButtonPress action ->
-                        let newState =
+                        let newNightLightState =
                             match action with
-                            | PressedOn -> state |> withStateForRemoteControlledLights On
-                            | PressedOff -> state |> withStateForRemoteControlledLights Off
+                            | PressedOn -> currentState |> withStateForRemoteControlledLights On
+                            | PressedOff -> currentState |> withStateForRemoteControlledLights Off
                             | PressedLeft ->
                                 let lightThatShouldBeOn =
                                     remoteControlledLights
                                     |> Seq.find (fun light -> light.ControlledWithRemote = RemoteLeft)
 
-                                state
+                                currentState
                                 |> withStateForRemoteControlledLights Off
                                 |> withStateFor lightThatShouldBeOn On
 
-                        NightLightStateMachine(Some newState),
-                        remoteControlledLights
-                        |> Seq.collect (fun light ->
-                            generateZigbeeCommandsToFixLight newState.LightToState[light] light)
-            | TimeChanged newTime, maybeState ->
+                        NightLightStateMachine(Some newNightLightState),
+                        generateZigbeeCommandsForDifference (Some currentState) newNightLightState
+            | TimeChanged newTime, maybeCurrentState ->
                 let newPartOfDay = getPartOfDay newTime
 
                 let partOfDayChanged =
                     let maybePreviousPartOfDay =
-                        maybeState |> Option.map _.Time |> Option.map getPartOfDay
+                        maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
 
                     maybePreviousPartOfDay <> Some newPartOfDay
 
@@ -90,7 +98,9 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                             |> getDesiredColorAndBrightness light.Bulb
 
                         let previousState =
-                            maybeState |> Option.map _.LightToState[light].State |> Option.defaultValue On
+                            maybeCurrentState
+                            |> Option.map _.LightToState[light].State
+                            |> Option.defaultValue On
 
                         let newState =
                             if partOfDayChanged && newPartOfDay = Day then
@@ -104,18 +114,12 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                           State = newState })
                     |> Map.ofSeq
 
-                let newNightLightStateMachine =
+                let newNightLightState =
                     { Time = newTime
                       LightToState = newLightToState }
-                    |> Some
-                    |> NightLightStateMachine
 
                 return
-                    newNightLightStateMachine,
-                    if partOfDayChanged then
-                        lights
-                        |> Seq.collect (fun light -> generateZigbeeCommandsToFixLight newLightToState[light] light)
-                    else
-                        Seq.empty
+                    NightLightStateMachine(Some newNightLightState),
+                    generateZigbeeCommandsForDifference maybeCurrentState newNightLightState
             | _, None -> return! Error TimeIsUnknown
         }
