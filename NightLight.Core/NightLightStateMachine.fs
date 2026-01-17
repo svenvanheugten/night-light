@@ -11,22 +11,24 @@ open FsToolkit.ErrorHandling
 let internal tryFindLight friendlyName =
     Seq.tryFind (fun light -> light.FriendlyName = friendlyName) lights
 
-let internal generateZigbeeCommandsToFixLight state (light: Light) =
-    seq {
-        match light.ControlledWithRemote, state.State with
-        | NonRemote, On -> ()
-        | NonRemote, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
-        | _, _ -> yield generateStateCommand state.State light
-
-        if state.State = On then
-            yield generateColorCommand light state.Color
-            yield generateBrightnessCommand light state.Brightness
-    }
-
 type internal NightLightState =
     { Time: DateTime
       Alarm: bool
       LightToState: Map<Light, LightState> }
+
+let internal generateZigbeeCommandsToFixLight (nightLightState: NightLightState) (light: Light) =
+    seq {
+        let desiredLightState = nightLightState.LightToState[light]
+
+        match light.ControlledWithRemote, desiredLightState.State with
+        | NonRemote, On -> ()
+        | NonRemote, Off -> failwith $"Unexpectly trying to turn off {light}. It's not remote-controlled."
+        | _, _ -> yield generateStateCommand nightLightState.LightToState[light].State light
+
+        if desiredLightState.State = On then
+            yield generateColorCommand light desiredLightState.Color
+            yield generateBrightnessCommand light desiredLightState.Brightness
+    }
 
 let internal withStateFor (light: Light) (state: State) (oldNightLightState: NightLightState) =
     let oldState = oldNightLightState.LightToState[light]
@@ -48,7 +50,7 @@ let internal generateZigbeeCommandsForDifference (maybeBefore: NightLightState o
         let oldState = maybeBefore |> Option.map _.LightToState[light]
 
         if oldState <> Some newState then
-            generateZigbeeCommandsToFixLight newState light
+            generateZigbeeCommandsToFixLight after light
         else
             Seq.empty)
 
@@ -68,7 +70,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
 
                         this,
                         match maybeLight with
-                        | Some light -> generateZigbeeCommandsToFixLight currentState.LightToState[light] light
+                        | Some light -> generateZigbeeCommandsToFixLight currentState light
                         | None -> Seq.empty
                     | ButtonPress action ->
                         let newNightLightState =
