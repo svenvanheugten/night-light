@@ -2,11 +2,6 @@ module internal NightLight.Core.ZigbeeCommands
 
 open System.Text.Json.Nodes
 open NightLight.Core.Models
-open NightLight.Core.Moods
-
-type State =
-    | On
-    | Off
 
 let toZigbeeCommand light payload =
     let topic = $"zigbee2mqtt/{light.FriendlyName.Get}/set"

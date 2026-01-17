@@ -15,12 +15,6 @@ let getDesiredMood room partOfDay =
     | Bedroom, Day -> Yellow
     | _, Night -> Red
 
-type Color =
-    | ColorByCoordinates of float * float
-    | ColorByTemperature of int
-
-type Brightness = Brightness of int
-
 let getDesiredColorAndBrightness bulb mood =
     let white = ColorByCoordinates(0.3227, 0.329)
     let yellow = ColorByTemperature 454

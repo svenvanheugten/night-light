@@ -77,3 +77,13 @@ let remoteControlledLights =
     lights |> Seq.filter (not << _.ControlledWithRemote.IsNonRemote)
 
 let remoteControlFriendlyName = DeviceFriendlyName "Fjärrkontroll"
+
+type internal State =
+    | On
+    | Off
+
+type internal Brightness = Brightness of int
+
+type internal Color =
+    | ColorByCoordinates of float * float
+    | ColorByTemperature of int
