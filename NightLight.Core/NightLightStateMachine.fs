@@ -48,7 +48,11 @@ let internal createOrUpdateNightLightState
 
             light,
             { Color = color
-              Brightness = brightness
+              Brightness =
+                if alarm && light.ControlledWithRemote <> NonRemote then
+                    brightness.Scale(getAlarmWeight time)
+                else
+                    brightness
               State = if alarm then On else previousState })
         |> Map.ofSeq
 

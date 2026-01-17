@@ -79,7 +79,12 @@ type internal State =
     | On
     | Off
 
-type internal Brightness = Brightness of int
+type internal Brightness =
+    | Brightness of int
+
+    member this.Scale(b: float) =
+        match this with
+        | Brightness brightness -> Brightness <| int (float brightness * b)
 
 type internal Color =
     | ColorByCoordinates of float * float
