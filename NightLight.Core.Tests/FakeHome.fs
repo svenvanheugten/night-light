@@ -156,3 +156,8 @@ type FakeHome with
         this.LightStates
         |> Seq.filter (fst >> _.ControlledWithRemote >> (<>) NonRemote)
         |> Seq.toList
+
+    member this.Label =
+        this.LightsThatAreOn
+        |> Seq.map (fun (light, state) -> $"{light.FriendlyName.Get}: {state}")
+        |> String.concat ", "

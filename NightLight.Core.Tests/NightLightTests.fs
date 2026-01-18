@@ -38,6 +38,7 @@ type NightLightTests() =
                 | Night -> color = Red)
         |> Prop.collect partOfDay
         |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
+        |> Prop.label fakeHome.Label
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
@@ -55,6 +56,7 @@ type NightLightTests() =
             | { Bulb = PaulmannBulb }, On(80uy, Red) -> true
             | _ -> false)
         |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
+        |> Prop.label fakeHome.Label
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
@@ -69,6 +71,7 @@ type NightLightTests() =
         nonRemotelyControlledLightsWithPower
         |> Seq.forall (snd >> _.IsOn)
         |> Prop.collect $"{nonRemotelyControlledLightsWithPower.Length} non-remotely controlled light(s) with power"
+        |> Prop.label fakeHome.Label
         |> Prop.trivial (nonRemotelyControlledLightsWithPower.Length = 0)
 
     [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
@@ -104,4 +107,5 @@ type NightLightTests() =
         |> Prop.collect $"last remote interaction is {maybeLastRemoteInteraction |> Option.map snd}"
         |> Prop.collect $"{remotelyControlledLightsWithPower.Length} remotely controlled light(s) with power"
         |> Prop.classify hasNewDayStartedSinceThen "new day has started since then"
+        |> Prop.label fakeHome.Label
         |> Prop.trivial (remotelyControlledLightsWithPower.Length = 0)
