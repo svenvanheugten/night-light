@@ -41,21 +41,44 @@ type NightLightTests() =
         |> Prop.label fakeHome.Label
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
-    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
+    // TODO: Bias generator for alarm cases so that `MaxTest` can be reduced
+    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |], MaxTest = 10_000)>]
     let ``All lights should either be off or have a brightness that fits its color`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
+        let time = getTimeAfterInteractions interactions |> _.TimeOfDay
+
+        let alarm =
+            hasNewDayStartedSince interactions (tryGetLastRemoteInteraction interactions)
+            && startOfDay <= time
+            && time <= endOfAlarm
+
+        let scaledForAlarm light brightness =
+            if light.ControlledWithRemote <> NonRemote && alarm then
+                float brightness * ((time - startOfDay) / (endOfAlarm - startOfDay)) |> byte
+            else
+                brightness
 
         fakeHome.LightStates
-        |> Seq.forall (function
-            | _, Off
-            | { Bulb = IkeaBulb }, On(254uy, White) -> true
-            | { Bulb = IkeaBulb }, On(210uy, Yellow) -> true
-            | { Bulb = IkeaBulb }, On(254uy, Red) -> true
-            | { Bulb = PaulmannBulb }, On(35uy, White) -> true
-            | { Bulb = PaulmannBulb }, On(35uy, Yellow) -> true
-            | { Bulb = PaulmannBulb }, On(80uy, Red) -> true
-            | _ -> false)
+        |> Seq.forall (fun (light, state) ->
+            let maybeExpectedBrightness =
+                match light, state with
+                | _, Off -> None
+                | { Bulb = IkeaBulb }, On(_, White) -> Some 254uy
+                | { Bulb = IkeaBulb }, On(_, Yellow) -> Some 210uy
+                | { Bulb = IkeaBulb }, On(_, Red) -> Some 254uy
+                | { Bulb = PaulmannBulb }, On(_, White) -> Some 35uy
+                | { Bulb = PaulmannBulb }, On(_, Yellow) -> Some 35uy
+                | { Bulb = PaulmannBulb }, On(_, Red) -> Some 80uy
+                |> Option.map (scaledForAlarm light)
+
+            let maybeActualBrightness =
+                match state with
+                | Off -> None
+                | On(brightness, _) -> Some brightness
+
+            maybeExpectedBrightness = maybeActualBrightness)
         |> Prop.collect $"{fakeHome.LightsThatAreOn.Length} light(s) on"
+        |> Prop.classify alarm "alarm"
         |> Prop.label fakeHome.Label
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 

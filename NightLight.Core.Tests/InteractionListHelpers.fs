@@ -6,23 +6,25 @@ type PartOfDay =
     | Day
     | Night
 
-let private getPartOfDay (dateTime: DateTime) =
+let startOfDay = TimeSpan.FromHours 6
+let endOfAlarm = TimeSpan.FromHours 6.25
+let endOfDay = TimeSpan.FromHours 20.5
+
+let getPartOfDay (dateTime: DateTime) =
     match dateTime with
-    | _ when
-        dateTime.TimeOfDay >= TimeSpan.FromHours 6
-        && dateTime.TimeOfDay < TimeSpan.FromHours 20.5
-        ->
-        Day
+    | _ when dateTime.TimeOfDay >= startOfDay && dateTime.TimeOfDay < endOfDay -> Day
     | _ -> Night
 
-let getPartOfDayAfterInteractions interactions =
+let getTimeAfterInteractions interactions =
     interactions
     |> Seq.choose (fun interaction ->
         match interaction with
         | Interaction.TimeChanged time -> Some time
         | _ -> None)
     |> Seq.last
-    |> getPartOfDay
+
+let getPartOfDayAfterInteractions interactions =
+    interactions |> getTimeAfterInteractions |> getPartOfDay
 
 let doesLightHavePowerAfterInteractions light interactions =
     interactions
