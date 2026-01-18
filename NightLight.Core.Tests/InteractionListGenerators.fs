@@ -2,7 +2,6 @@ module NightLight.Core.Tests.InteractionListGenerators
 
 open System
 open NightLight.Core.Models
-open FsCheck
 open FsCheck.FSharp
 
 let private genTimeChanged =
@@ -20,15 +19,25 @@ let private genRemoteInteraction =
 let private genInteraction =
     Gen.oneof [ genTimeChanged; genHumanInteraction; genRemoteInteraction ]
 
-let private genInteractions = genInteraction |> Gen.listOf
-
-let private ensureStartsWithTimeChanged (genInteractions: Gen<Interaction list>) =
-    genInteractions
-    |> Gen.bind (fun interactions ->
-        match interactions with
-        | Interaction.TimeChanged _ :: _ -> Gen.constant interactions
-        | _ -> genTimeChanged |> Gen.map (fun tc -> tc :: interactions))
-
 type ArbitraryInteractions() =
     static member Interactions() =
-        genInteractions |> ensureStartsWithTimeChanged |> Arb.fromGen
+        let gen =
+            genInteraction
+            |> Gen.listOf
+            |> Gen.bind (fun interactions ->
+                match interactions with
+                | Interaction.TimeChanged _ :: _ -> Gen.constant interactions
+                | _ -> genTimeChanged |> Gen.map (fun tc -> tc :: interactions))
+
+        let removeFromFrontAfterFirst (lst: 'a list) : seq<'a list> =
+            Seq.unfold
+                (fun current ->
+                    match current with
+                    | [] -> None
+                    | [ _ ] -> None
+                    | first :: _ :: rest ->
+                        let next = first :: rest
+                        Some(next, next))
+                lst
+
+        Arb.fromGenShrink (gen, removeFromFrontAfterFirst)
