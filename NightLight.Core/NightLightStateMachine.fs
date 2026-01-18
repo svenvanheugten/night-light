@@ -130,7 +130,7 @@ type NightLightStateMachine private (maybeState: NightLightState option) =
                         let maybePreviousPartOfDay =
                             maybeCurrentState |> Option.map _.Time |> Option.map getPartOfDay
 
-                        maybePreviousPartOfDay <> Some Day && newPartOfDay = Day
+                        maybePreviousPartOfDay = Some Night && newPartOfDay = Day
 
                     newDayStarted
                     || maybeCurrentState |> Option.map _.Alarm |> Option.defaultValue false
