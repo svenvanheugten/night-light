@@ -17,7 +17,7 @@ let private genRemoteInteraction =
     |> Gen.map RemoteInteraction
 
 let private genInteraction =
-    Gen.oneof [ genTimeChanged; genHumanInteraction; genRemoteInteraction ]
+    Gen.frequency [ 4, genTimeChanged; 1, genHumanInteraction; 1, genRemoteInteraction ]
 
 type ArbitraryInteractions() =
     static member Interactions() =
