@@ -2,10 +2,33 @@ module NightLight.Core.Tests.InteractionListGenerators
 
 open System
 open NightLight.Core.Models
+open NightLight.Core.Tests.InteractionListHelpers
 open FsCheck.FSharp
 
 let private genTimeChanged =
-    ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map Interaction.TimeChanged
+    let genDate = ArbMap.defaults |> ArbMap.generate<DateTime> |> Gen.map _.Date
+
+    let genTimeSpanBetween (l: TimeSpan) (h: TimeSpan) =
+        Gen.choose (int l.TotalSeconds, int h.TotalSeconds)
+        |> Gen.map int64
+        |> Gen.map TimeSpan.FromSeconds
+
+    let (+) = Gen.map2 (+)
+
+    let genDayBoundaryDateTime =
+        genDate
+        + Gen.elements [ startOfDay; endOfDay ]
+        + genTimeSpanBetween (-TimeSpan.FromMinutes 20.0) (TimeSpan.FromMinutes 20.0)
+
+    let genStartOfDayDateTime =
+        genDate
+        + Gen.constant startOfDay
+        + genTimeSpanBetween TimeSpan.Zero (TimeSpan.FromMinutes 20.0)
+
+    let genAnyDateTime = ArbMap.defaults |> ArbMap.generate<DateTime>
+
+    Gen.frequency [ 4, genStartOfDayDateTime; 2, genDayBoundaryDateTime; 1, genAnyDateTime ]
+    |> Gen.map Interaction.TimeChanged
 
 let private genHumanInteraction =
     Gen.elements lights

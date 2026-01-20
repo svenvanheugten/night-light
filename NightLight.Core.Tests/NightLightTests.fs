@@ -41,8 +41,7 @@ type NightLightTests() =
         |> Prop.label fakeHome.Label
         |> Prop.trivial (fakeHome.LightsThatAreOn.Length = 0)
 
-    // TODO: Bias generator for alarm cases so that `MaxTest` can be reduced
-    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |], MaxTest = 10_000)>]
+    [<Property(Arbitrary = [| typeof<ArbitraryInteractions> |])>]
     let ``All lights should either be off or have a brightness that fits its color`` (interactions: Interaction list) =
         let fakeHome = createFakeHomeWithNightLightAndInteract interactions
         let time = getTimeAfterInteractions interactions |> _.TimeOfDay
