@@ -1,7 +1,7 @@
 {
   buildDotnetModule,
-  dotnet-sdk_9,
-  dotnet-runtime_9,
+  dotnet-sdk_10,
+  dotnet-runtime_10,
 }:
 
 buildDotnetModule rec {
@@ -13,8 +13,8 @@ buildDotnetModule rec {
   projectFile = "NightLight/NightLight.fsproj";
   nugetDeps = ./deps.json;
 
-  dotnet-sdk = dotnet-sdk_9;
-  dotnet-runtime = dotnet-runtime_9;
+  dotnet-sdk = dotnet-sdk_10;
+  dotnet-runtime = dotnet-runtime_10;
 
   executables = [ "NightLight" ];
 }
