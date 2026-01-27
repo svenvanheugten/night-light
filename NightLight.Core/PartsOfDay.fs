@@ -6,7 +6,7 @@ type PartOfDay =
     | Day
     | Night
 
-let private startOfDay = TimeSpan.FromHours 6
+let private startOfDay = TimeSpan.FromHours 5.25
 let private endOfDay = TimeSpan.FromHours 20.5
 
 let getPartOfDay (dateTime: DateTime) =

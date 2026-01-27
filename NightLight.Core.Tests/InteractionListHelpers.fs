@@ -6,8 +6,8 @@ type PartOfDay =
     | Day
     | Night
 
-let startOfDay = TimeSpan.FromHours 6
-let endOfAlarm = TimeSpan.FromHours 6.25
+let startOfDay = TimeSpan.FromHours 5.25
+let endOfAlarm = TimeSpan.FromHours 5.50
 let endOfDay = TimeSpan.FromHours 20.5
 
 let getPartOfDay (dateTime: DateTime) =
