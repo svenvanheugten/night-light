@@ -15,6 +15,9 @@
       in
       {
         packages.default = pkgs.callPackage ./default.nix { };
+        devShells.default = pkgs.mkShell {
+          buildInputs = [ pkgs.dotnet-sdk_10 ];
+        };
       }
     );
 }
