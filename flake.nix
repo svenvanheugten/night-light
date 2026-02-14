@@ -23,7 +23,7 @@
     )
     // {
       nixosModules = {
-        night-light = import ./module.nix;
+        night-light = import ./module.nix self;
       };
     };
 }

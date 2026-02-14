@@ -1,3 +1,4 @@
+self:
 {
   config,
   lib,
@@ -7,8 +8,8 @@
 
 with lib;
 let
+  inherit (pkgs.stdenv.hostPlatform) system;
   cfg = config.services.nightLight;
-  pkg = pkgs.callPackage ./default.nix { };
 in
 {
   options.services.nightLight = {
@@ -29,7 +30,7 @@ in
       after = [ "network.target" ];
 
       serviceConfig = {
-        ExecStart = "${pkg}/bin/NightLight";
+        ExecStart = "${self.packages.${system}.default}/bin/NightLight";
         Restart = "on-failure";
         User = "night-light";
         Group = "night-light";
