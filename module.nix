@@ -18,6 +18,7 @@ in
 
   config = mkIf cfg.enable {
     services.zigbee2mqtt.enable = true;
+    services.mosquitto.enable = true;
     users.groups.night-light = { };
     users.users.night-light = {
       isSystemUser = true;
