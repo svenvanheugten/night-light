@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="NightLight.Core.Tests/NightLight.Core.Tests.fsproj" />
+  <Project Path="NightLight.Core/NightLight.Core.fsproj" />
+  <Project Path="NightLight/NightLight.fsproj" />
+</Solution>
